@@ -11,7 +11,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Leaf, Menu, Home, User, LogOut } from "lucide-react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { toast } from "sonner"
 
 interface AppHeaderProps {
   steps: number
@@ -19,6 +21,22 @@ interface AppHeaderProps {
 
 export function AppHeader({ steps }: AppHeaderProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const supabase = createClientComponentClient()
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        toast.error(error.message)
+        return
+      }
+      toast.success("Logged out successfully")
+      router.push("/")
+    } catch (error) {
+      toast.error("An error occurred during logout")
+    }
+  }
 
   const isActive = (path: string) => {
     return pathname === path
@@ -96,14 +114,12 @@ export function AppHeader({ steps }: AppHeaderProps) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-[#e5dfd3]" />
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/login"
-                  className="flex items-center gap-2 cursor-pointer text-[#5d6b5d] focus:bg-[#e5dfd3] focus:text-[#5d6b5d]"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </Link>
+              <DropdownMenuItem
+                onSelect={handleLogout}
+                className="flex items-center gap-2 cursor-pointer text-[#5d6b5d] focus:bg-[#e5dfd3] focus:text-[#5d6b5d]"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -122,14 +138,12 @@ export function AppHeader({ steps }: AppHeaderProps) {
             <DropdownMenuContent align="end" className="bg-[#f0ebe1] border-[#e5dfd3]">
               <DropdownMenuLabel className="text-[#5d6b5d]">My Account</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-[#e5dfd3]" />
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/login"
-                  className="flex items-center gap-2 cursor-pointer text-[#5d6b5d] focus:bg-[#e5dfd3] focus:text-[#5d6b5d]"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </Link>
+              <DropdownMenuItem
+                onSelect={handleLogout}
+                className="flex items-center gap-2 cursor-pointer text-[#5d6b5d] focus:bg-[#e5dfd3] focus:text-[#5d6b5d]"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

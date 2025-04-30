@@ -37,10 +37,12 @@ export default function LandingPage() {
           </div>
           <div className="flex-1 relative h-[400px] w-full">
             <Image
-              src="/placeholder.svg?height=400&width=400"
+              src="/placeholder.svg"
               alt="Zen Garden Illustration"
-              fill
-              className="object-contain"
+              width={400}
+              height={400}
+              className="object-contain w-full h-full"
+              priority
             />
           </div>
         </section>
@@ -168,10 +170,12 @@ export default function LandingPage() {
             </div>
             <div className="flex-1 relative h-[300px] w-full">
               <Image
-                src="/placeholder.svg?height=300&width=500"
+                src="/placeholder.svg"
                 alt="Zen Garden Illustration"
-                fill
-                className="object-contain rounded-md"
+                width={500}
+                height={300}
+                className="object-contain w-full h-full rounded-md"
+                priority
               />
             </div>
           </div>
