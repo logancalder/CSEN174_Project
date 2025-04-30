@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -9,33 +8,98 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Leaf } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
-import { LucideIcon, LogIn } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate login - in a real app, this would authenticate with a backend
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      toast.success("Logged in successfully!");
       router.push("/dashboard");
-    }, 1500);
+    } catch (error) {
+      toast.error("An error occurred during login");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate signup - in a real app, this would register with a backend
-    setTimeout(() => {
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
       setIsLoading(false);
-      router.push("/dashboard");
-    }, 1500);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        console.error("Signup error:", error);
+        toast.error(error.message);
+        return;
+      }
+
+      if (data?.user) {
+        console.log("Signup successful:", data);
+        toast.success("Sign up successful! Please check your email to verify your account.");
+        // Don't redirect immediately after signup - wait for email verification
+      } else {
+        toast.error("No user data received");
+      }
+    } catch (error) {
+      console.error("Signup error:", error);
+      toast.error("An error occurred during sign up");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message);
+      }
+    } catch (error) {
+      toast.error("An error occurred during Google sign in");
+    }
   };
 
   return (
@@ -79,6 +143,8 @@ export default function LoginPage() {
                     type="email"
                     placeholder="you@example.com"
                     required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="border-[#d1c9b8] bg-[#f5f2e9] focus:border-[#6b8e6b] focus:ring-[#6b8e6b]"
                   />
                 </div>
@@ -103,6 +169,8 @@ export default function LoginPage() {
                     type="password"
                     placeholder="••••••••"
                     required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="border-[#d1c9b8] bg-[#f5f2e9] focus:border-[#6b8e6b] focus:ring-[#6b8e6b]"
                   />
                 </div>
@@ -115,12 +183,13 @@ export default function LoginPage() {
                   {isLoading ? "Logging in..." : "Login"}
                 </Button>
                 <Button
+                  type="button"
                   className="w-full bg-[#ffffff] hover:bg-[#f5f2e9] text-[#000000]"
                   size="lg"
-                  onClick={() => signIn("google")}
+                  onClick={handleGoogleLogin}
                 >
                   <svg
-                    className="w-5 h-5"
+                    className="w-5 h-5 mr-2"
                     viewBox="0 0 488 512"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="currentColor"
@@ -161,6 +230,8 @@ export default function LoginPage() {
                     type="text"
                     placeholder="Your name"
                     required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     className="border-[#d1c9b8] bg-[#f5f2e9] focus:border-[#6b8e6b] focus:ring-[#6b8e6b]"
                   />
                 </div>
@@ -177,6 +248,8 @@ export default function LoginPage() {
                     type="email"
                     placeholder="you@example.com"
                     required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="border-[#d1c9b8] bg-[#f5f2e9] focus:border-[#6b8e6b] focus:ring-[#6b8e6b]"
                   />
                 </div>
@@ -193,6 +266,8 @@ export default function LoginPage() {
                     type="password"
                     placeholder="••••••••"
                     required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="border-[#d1c9b8] bg-[#f5f2e9] focus:border-[#6b8e6b] focus:ring-[#6b8e6b]"
                   />
                 </div>
@@ -202,25 +277,8 @@ export default function LoginPage() {
                   className="w-full bg-[#6b8e6b] hover:bg-[#5d6b5d] text-[#f5f2e9]"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Creating account..." : "Sign Up"}
+                  {isLoading ? "Signing up..." : "Sign Up"}
                 </Button>
-
-                <p className="text-xs text-center text-[#6c6c6c]">
-                  By signing up, you agree to our{" "}
-                  <Link
-                    href="#"
-                    className="text-[#6b8e6b] hover:text-[#5d6b5d]"
-                  >
-                    Terms of Service
-                  </Link>{" "}
-                  and{" "}
-                  <Link
-                    href="#"
-                    className="text-[#6b8e6b] hover:text-[#5d6b5d]"
-                  >
-                    Privacy Policy
-                  </Link>
-                </p>
               </form>
             </TabsContent>
           </Tabs>
