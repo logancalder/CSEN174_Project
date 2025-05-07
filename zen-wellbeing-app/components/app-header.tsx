@@ -10,19 +10,63 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Leaf, Menu, Home, User, LogOut } from "lucide-react"
+import { Leaf, Menu, Home, User, LogOut, Droplets, Sun } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from "sonner"
+import { useEffect, useState } from "react"
 
-interface AppHeaderProps {
-  steps: number
+interface Currency {
+  points: number
+  water: number
+  sunlight: number
 }
 
-export function AppHeader({ steps }: AppHeaderProps) {
+export function AppHeader() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClientComponentClient()
+  const [currency, setCurrency] = useState<Currency>({ points: 0, water: 0, sunlight: 0 })
+
+  useEffect(() => {
+    const fetchCurrency = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          const { data, error } = await supabase
+            .from('currency')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single()
+
+          if (error) {
+            console.error('Error fetching currency:', error.message)
+            return
+          }
+
+          if (data) {
+            setCurrency({
+              points: data.points,
+              water: data.water,
+              sunlight: data.sunlight
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error in fetchCurrency:', error)
+      }
+    }
+
+    fetchCurrency()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchCurrency()
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [supabase])
 
   const handleLogout = async () => {
     try {
@@ -76,9 +120,19 @@ export function AppHeader({ steps }: AppHeaderProps) {
         </nav>
 
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-1 bg-[#e9efe6] px-3 py-1 rounded-full">
-            <span className="text-sm font-medium text-[#5d6b5d]">{steps}</span>
-            <span className="text-xs text-[#6c6c6c]">steps</span>
+          <div className="hidden sm:flex items-center gap-4">
+            <div className="flex items-center gap-1 bg-[#e9efe6] px-3 py-1 rounded-full">
+              <span className="text-sm font-medium text-[#5d6b5d]">{currency.points}</span>
+              <span className="text-xs text-[#6c6c6c]">points</span>
+            </div>
+            <div className="flex items-center gap-1 bg-[#e9efe6] px-3 py-1 rounded-full">
+              <Droplets className="h-4 w-4 text-[#6b8e6b]" />
+              <span className="text-sm font-medium text-[#5d6b5d]">{currency.water}</span>
+            </div>
+            <div className="flex items-center gap-1 bg-[#e9efe6] px-3 py-1 rounded-full">
+              <Sun className="h-4 w-4 text-[#6b8e6b]" />
+              <span className="text-sm font-medium text-[#5d6b5d]">{currency.sunlight}</span>
+            </div>
           </div>
 
           <DropdownMenu>

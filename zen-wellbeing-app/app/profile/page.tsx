@@ -238,7 +238,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#f5f2e9]">
-      <AppHeader steps={steps} />
+      <AppHeader />
 
       <main className="container mx-auto px-4 py-8 mb-20">
         <div className="mb-8">

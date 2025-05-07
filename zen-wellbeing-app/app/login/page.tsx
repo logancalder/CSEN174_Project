@@ -73,6 +73,40 @@ export default function LoginPage() {
 
       if (data?.user) {
         console.log("Signup successful:", data);
+        
+        // Create initial goals record
+        const { error: goalsError } = await supabase
+          .from('goals')
+          .insert([{
+            user_id: data.user.id,
+            water: 2500, // 2.5L in mL
+            water_unit: 'L',
+            steps: 10000,
+            sleep: 8
+          }]);
+
+        if (goalsError) {
+          console.error("Error creating goals:", goalsError);
+          toast.error("Error setting up your goals");
+          return;
+        }
+
+        // Create initial currency record
+        const { error: currencyError } = await supabase
+          .from('currency')
+          .insert([{
+            user_id: data.user.id,
+            points: 0,
+            water: 0,
+            sunlight: 0
+          }]);
+
+        if (currencyError) {
+          console.error("Error creating currency:", currencyError);
+          toast.error("Error setting up your currency");
+          return;
+        }
+
         toast.success("Sign up successful! Please check your email to verify your account.");
         // Don't redirect immediately after signup - wait for email verification
       } else {
