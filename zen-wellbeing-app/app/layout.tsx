@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { NavBar } from '@/components/nav-bar'
 import { Toaster } from 'sonner'
+import { usePathname } from 'next/navigation'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -21,7 +22,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <div className="min-h-screen flex flex-col">
           <NavBar />
-          <div className="flex-1 md:pt-20 pb-16 md:pb-0">
+          <div className="flex-1">
             {children}
           </div>
         </div>

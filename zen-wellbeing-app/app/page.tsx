@@ -6,7 +6,7 @@ import { Leaf } from "lucide-react"
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#f5f2e9]">
-      <header className="container mx-auto py-6 px-4 flex justify-between items-center">
+      {/* <header className="container mx-auto py-6 px-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Leaf className="h-8 w-8 text-[#6b8e6b]" />
           <span className="text-2xl font-medium text-[#5d6b5d]">Zen</span>
@@ -16,7 +16,7 @@ export default function LandingPage() {
             <Button className="bg-[#6b8e6b] hover:bg-[#5d6b5d] text-[#f5f2e9]">Begin Journey</Button>
           </Link>
         </nav>
-      </header>
+      </header> */}
 
       <main className="container mx-auto px-4 py-12">
         <section className="flex flex-col md:flex-row items-center gap-12 py-12">

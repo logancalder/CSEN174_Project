@@ -88,15 +88,17 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#e5dfd3] bg-[#f5f2e9]/80 backdrop-blur-sm">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          <Link href="/dashboard" className="flex items-center gap-2">
+      <div className="container mx-auto flex h-16 items-center px-4">
+        {/* Left section - Logo */}
+        <div className="w-1/3 flex items-center">
+          <Link href="/" className="flex items-center gap-2">
             <Leaf className="h-6 w-6 text-[#6b8e6b]" />
             <span className="text-xl font-medium text-[#5d6b5d]">Zen</span>
           </Link>
         </div>
 
-        <nav className="hidden md:flex items-center gap-6">
+        {/* Center section - Navigation */}
+        <nav className="w-1/3 flex justify-center items-center gap-6">
           <Link
             href="/dashboard"
             className={`flex items-center gap-1 text-sm font-medium ${
@@ -119,19 +121,20 @@ export function AppHeader() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-4">
+        {/* Right section - Currency and User Menu */}
+        <div className="w-1/3 flex justify-end items-center gap-4">
           <div className="hidden sm:flex items-center gap-4">
             <div className="flex items-center gap-1 bg-[#e9efe6] px-3 py-1 rounded-full">
-              <span className="text-sm font-medium text-[#5d6b5d]">{currency.points}</span>
+              <span className="text-sm font-medium text-[#5d6b5d]">{currency.points || 0}</span>
               <span className="text-xs text-[#6c6c6c]">points</span>
             </div>
             <div className="flex items-center gap-1 bg-[#e9efe6] px-3 py-1 rounded-full">
               <Droplets className="h-4 w-4 text-[#6b8e6b]" />
-              <span className="text-sm font-medium text-[#5d6b5d]">{currency.water}</span>
+              <span className="text-sm font-medium text-[#5d6b5d]">{currency.water || 0}</span>
             </div>
             <div className="flex items-center gap-1 bg-[#e9efe6] px-3 py-1 rounded-full">
               <Sun className="h-4 w-4 text-[#6b8e6b]" />
-              <span className="text-sm font-medium text-[#5d6b5d]">{currency.sunlight}</span>
+              <span className="text-sm font-medium text-[#5d6b5d]">{currency.sunlight || 0}</span>
             </div>
           </div>
 
