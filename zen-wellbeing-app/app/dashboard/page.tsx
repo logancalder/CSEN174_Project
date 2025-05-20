@@ -21,9 +21,20 @@ type Activity = {
   waterType: string
 }
 
+type ActivityType = 'water' | 'exercise' | 'sleep';
+type ProgressKey = 'water' | 'steps' | 'sleep';
+
 export default function DashboardPage() {
   const [steps, setSteps] = useState(120)
-  const [dailyProgress, setDailyProgress] = useState(35)
+  const [dailyProgress, setDailyProgress] = useState<{
+    water: { current: number; goal: number };
+    steps: { current: number; goal: number };
+    sleep: { current: number; goal: number };
+  }>({
+    water: { current: 0, goal: 0 },
+    steps: { current: 0, goal: 0 },
+    sleep: { current: 0, goal: 0 }
+  })
   const [currency, setCurrency] = useState<{ points: number; water: number; sunlight: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -67,83 +78,252 @@ export default function DashboardPage() {
   }
 
   const fetchCurrency = async (userId: string) => {
-    const { data: currencyData, error: currencyError } = await supabase
-      .from('currency')
-      .select('points, water, sunlight')
-      .eq('user_id', userId)
-      .single()
-    if (!currencyError) {
-      setCurrency(currencyData)
+    try {
+      const { data: currencyData, error: currencyError } = await supabase
+        .from('currency')
+        .select('points, water, sunlight')
+        .eq('user_id', userId)
+        .single()
+      
+      if (currencyError) {
+        console.error('Error fetching currency:', currencyError)
+        setError('Failed to fetch currency data')
+        return
+      }
+      
+      if (currencyData) {
+        setCurrency(currencyData)
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching currency:', err)
+      setError('An unexpected error occurred')
     }
   }
 
+  // Add scoring function
+  const calculateScore = (actual: number, goal: number): number => {
+    if (goal === 0) return 0; // Prevent division by zero
+    const ratio = actual / goal;
+    return ratio <= 1.2 ? ratio : 2 - ratio;
+  }
+
   const logActivity = async (activity: Activity) => {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError || !session?.user) {
-      alert('Could not get user session.')
-      return
-    }
-    const userId = session.user.id
-    const value = activityInputs[activity.id]
-    let updateData: { steps?: number; water?: number; sleep?: number } = { steps: 0, water: 0, sleep: 0 }
-    if (activity.id === 'exercise') updateData.steps = Number(value)
-    if (activity.id === 'water') updateData.water = Number(value)
-    if (activity.id === 'sleep') updateData.sleep = Number(value)
-
-    // Try to update
-    const { error: updateError, data: updateDataArr } = await supabase
-      .from('input_data')
-      .update(updateData)
-      .eq('user_id', userId)
-      .select('id')
-
-    if (updateError) {
-      console.error('Supabase update error:', updateError)
-      alert('Failed to update data.')
-      return
-    }
-
-    // If no row was updated, insert a new one
-    if (!updateDataArr || updateDataArr.length === 0) {
-      const { error: insertError } = await supabase.from('input_data').insert([{
-        user_id: userId,
-        steps: updateData.steps ?? 0,
-        water: updateData.water ?? 0,
-        sleep: updateData.sleep ?? 0
-      }])
-      if (insertError) {
-        console.error('Supabase insert error:', insertError)
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !session?.user) {
+        setError('Could not get user session.')
         return
       }
-    }
 
-    setActivityInputs((prev) => ({ ...prev, [activity.id]: '' }))
-    await fetchCurrency(userId)
+      const userId = session.user.id
+      const value = activityInputs[activity.id]
+      
+      // Validate input
+      if (!value || isNaN(Number(value))) {
+        setError('Please enter a valid number')
+        return
+      }
+
+      let updateData: { steps?: number; water?: number; sleep?: number } = { steps: 0, water: 0, sleep: 0 }
+      
+      // Set values based on activity type
+      if (activity.id === 'exercise') {
+        updateData.steps = Number(value)
+      }
+      if (activity.id === 'water') {
+        updateData.water = Number(value)
+      }
+      if (activity.id === 'sleep') {
+        updateData.sleep = Number(value)
+      }
+
+      // Update input_data table
+      const { error: updateError, data: updateDataArr } = await supabase
+        .from('input_data')
+        .update(updateData)
+        .eq('user_id', userId)
+        .select('id')
+
+      if (updateError) {
+        console.error('Supabase update error:', updateError)
+        setError('Failed to update data.')
+        return
+      }
+
+      // If no row was updated in input_data, insert a new one
+      if (!updateDataArr || updateDataArr.length === 0) {
+        const { error: insertError } = await supabase.from('input_data').insert([{
+          user_id: userId,
+          steps: updateData.steps ?? 0,
+          water: updateData.water ?? 0,
+          sleep: updateData.sleep ?? 0
+        }])
+        if (insertError) {
+          console.error('Supabase insert error:', insertError)
+          setError('Failed to insert new data')
+          return
+        }
+      }
+
+      // Fetch current goals
+      const { data: goals, error: goalsError } = await supabase
+        .from('goals')
+        .select('water, steps, sleep')
+        .eq('user_id', userId)
+        .single()
+
+      if (goalsError) {
+        console.error('Error fetching goals:', goalsError)
+        setError('Failed to fetch goals')
+        return
+      }
+
+      // Fetch current input data
+      const { data: currentInput, error: inputError } = await supabase
+        .from('input_data')
+        .select('water, steps, sleep')
+        .eq('user_id', userId)
+        .single()
+
+      if (inputError) {
+        console.error('Error fetching input data:', inputError)
+        setError('Failed to fetch input data')
+        return
+      }
+
+      // Calculate scores for each metric
+      const waterScore = calculateScore(currentInput?.water ?? 0, goals?.water ?? 0)
+      const stepsScore = calculateScore(currentInput?.steps ?? 0, goals?.steps ?? 0)
+      const sleepScore = calculateScore(currentInput?.sleep ?? 0, goals?.sleep ?? 0)
+
+      // Calculate total points
+      let totalPoints = Math.round(
+        (33.3 * waterScore) + 
+        (33.3 * stepsScore) + 
+        (33.3 * sleepScore)
+      )
+
+      // Ensure points are not negative
+      totalPoints = Math.max(0, totalPoints)
+
+      // Fetch current currency values
+      const { data: currentCurrency, error: currencyFetchError } = await supabase
+        .from('currency')
+        .select('points, water, sunlight')
+        .eq('user_id', userId)
+        .single()
+
+      if (currencyFetchError && currencyFetchError.code !== 'PGRST116') {
+        console.error('Error fetching currency:', currencyFetchError)
+        setError('Failed to fetch current currency')
+        return
+      }
+
+      // Update currency table with new values
+      const { error: currencyError } = await supabase
+        .from('currency')
+        .upsert({
+          user_id: userId,
+          points: (currentCurrency?.points ?? 0) + totalPoints,
+          water: activity.id === 'water' 
+            ? (currentCurrency?.water ?? 0) + Number(value) 
+            : (currentCurrency?.water ?? 0),
+          sunlight: activity.id === 'sleep' 
+            ? (currentCurrency?.sunlight ?? 0) + Number(value) 
+            : (currentCurrency?.sunlight ?? 0)
+        }, {
+          onConflict: 'user_id'
+        })
+
+      if (currencyError) {
+        console.error('Error updating currency:', currencyError)
+        setError('Failed to update currency')
+        return
+      }
+
+      // Update daily progress
+      const progressKey: ProgressKey = activity.id === 'exercise' ? 'steps' : activity.id as ProgressKey;
+      setDailyProgress(prev => ({
+        ...prev,
+        [progressKey]: {
+          current: (prev[progressKey].current || 0) + Number(value),
+          goal: goals?.[progressKey] || 0
+        }
+      }))
+
+      setActivityInputs((prev) => ({ ...prev, [activity.id]: '' }))
+      
+      // Refresh all data
+      await fetchCurrency(userId)
+    } catch (err) {
+      console.error('Unexpected error in logActivity:', err)
+      setError('An unexpected error occurred')
+    }
+  }
+
+  // Add function to format water display
+  const formatWaterDisplay = (value: number, unit: string) => {
+    return `${value} ${unit}`
   }
 
   useEffect(() => {
     const fetchCurrencyAndGoals = async () => {
       setLoading(true)
       setError(null)
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError || !session?.user) {
-        setError("Could not get user session.")
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        if (sessionError || !session?.user) {
+          setError("Could not get user session.")
+          setLoading(false)
+          return
+        }
+        const userId = session.user.id
+
+        // Fetch currency
+        await fetchCurrency(userId)
+        
+        // Fetch goals and water unit
+        const { data: goalsData, error: goalsError } = await supabase
+          .from('goals')
+          .select('water, steps, sleep, water_unit')
+          .eq('user_id', userId)
+          .single()
+
+        if (!goalsError && goalsData) {
+          setWaterUnit(goalsData.water_unit || 'L')
+          
+          // Fetch today's input data
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          
+          const { data: inputData, error: inputError } = await supabase
+            .from('input_data')
+            .select('water, steps, sleep')
+            .eq('user_id', userId)
+            .gte('created_at', today.toISOString())
+            .single()
+
+          if (!inputError && inputData) {
+            setDailyProgress({
+              water: { current: inputData.water || 0, goal: goalsData.water || 0 },
+              steps: { current: inputData.steps || 0, goal: goalsData.steps || 0 },
+              sleep: { current: inputData.sleep || 0, goal: goalsData.sleep || 0 }
+            })
+          } else {
+            // Set goals even if no input data yet
+            setDailyProgress({
+              water: { current: 0, goal: goalsData.water || 0 },
+              steps: { current: 0, goal: goalsData.steps || 0 },
+              sleep: { current: 0, goal: goalsData.sleep || 0 }
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Error in fetchCurrencyAndGoals:', err)
+        setError('An unexpected error occurred')
+      } finally {
         setLoading(false)
-        return
       }
-      const userId = session.user.id
-      // Fetch currency
-      await fetchCurrency(userId)
-      // Fetch goals for water unit
-      const { data: goalsData, error: goalsError } = await supabase
-        .from('goals')
-        .select('water_unit')
-        .eq('user_id', userId)
-        .single()
-      if (!goalsError && goalsData?.water_unit) {
-        setWaterUnit(goalsData.water_unit)
-      }
-      setLoading(false)
     }
     fetchCurrencyAndGoals()
   }, [supabase])
@@ -185,7 +365,18 @@ export default function DashboardPage() {
               ) : error ? (
                 <span className="text-red-500">{error}</span>
               ) : (
-                <span className="text-3xl font-medium text-[#6a8d92]">{currency?.water ?? 0}</span>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-3xl font-medium text-[#6a8d92]">{currency?.water ?? 0} {waterUnit}</span>
+                    <span className="text-sm text-gray-500 ml-2">
+                      ({dailyProgress.water.current}/{dailyProgress.water.goal} {waterUnit} today)
+                    </span>
+                  </div>
+                  <Progress 
+                    value={(dailyProgress.water.current / dailyProgress.water.goal) * 100} 
+                    className="h-2 bg-[#e5dfd3]" 
+                  />
+                </div>
               )}
             </CardContent>
           </Card>
@@ -200,7 +391,18 @@ export default function DashboardPage() {
               ) : error ? (
                 <span className="text-red-500">{error}</span>
               ) : (
-                <span className="text-3xl font-medium text-[#e6b800]">{currency?.sunlight ?? 0}</span>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-3xl font-medium text-[#e6b800]">{currency?.sunlight ?? 0}</span>
+                    <span className="text-sm text-gray-500 ml-2">
+                      ({dailyProgress.sleep.current}/{dailyProgress.sleep.goal} hours today)
+                    </span>
+                  </div>
+                  <Progress 
+                    value={(dailyProgress.sleep.current / dailyProgress.sleep.goal) * 100} 
+                    className="h-2 bg-[#e5dfd3]" 
+                  />
+                </div>
               )}
             </CardContent>
           </Card>

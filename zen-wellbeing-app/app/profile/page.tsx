@@ -22,12 +22,12 @@ const storeWaterValue = (value: string, unit: string) => {
   const numValue = parseFloat(value)
   switch (unit.trim()) {
     case 'L':
-      return Math.round(numValue * 1000) // Convert L to mL for storage
+      return numValue // Store L as is
     case 'oz':
     case 'cups':
-      return Math.round(numValue) // Store as is
+      return numValue // Store as is
     default:
-      return Math.round(numValue * 1000) // default to L
+      return numValue // default to storing as is
   }
 }
 
@@ -35,12 +35,12 @@ const storeWaterValue = (value: string, unit: string) => {
 const getDisplayValue = (value: number, unit: string) => {
   switch (unit.trim()) {
     case 'L':
-      return (value / 1000).toFixed(1) // Convert mL to L
+      return value.toString() // Display L as is
     case 'oz':
     case 'cups':
       return value.toString() // Display as is
     default:
-      return (value / 1000).toFixed(1) // default to L
+      return value.toString() // default to displaying as is
   }
 }
 
