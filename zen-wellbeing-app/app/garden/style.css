@@ -1,0 +1,78 @@
+body {
+    margin: 0;
+    background: #3e8948;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    cursor: default;
+    overflow: hidden;
+}
+
+canvas {
+    width: 100vmin;
+    height: calc(100vmin * 10 / 20); /* maintain aspect ratio: height = width * (10 / 20) */
+    image-rendering: pixelated;
+}
+
+.hotbar {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    position: absolute;
+    bottom: 1rem;
+    image-rendering: pixelated;
+}
+
+.hotbar-slot {
+    width: 5rem;
+    height: 5rem;
+    background-color: rgba(30, 30, 30, 0.3);
+    background-repeat: no-repeat;
+    background-size: 4rem;
+    background-position: center;
+    border: 3px solid gray;
+}
+
+.selected.hotbar-slot {
+    border-color: lightgray;
+    outline: 5px solid lightgray;
+}
+
+.pointer {
+    background-image: url("/cursor.png");
+}
+
+.watering-can {
+    background-image: url("/watering-can.png");
+}
+
+.hoe {
+    background-image: url("/hoe.png");
+}
+
+.pickaxe {
+    background-image: url("/pickaxe.png");
+}
+
+.wheat-seed {
+    background-image: url("/wheat-seed.png");
+}
+
+.tomato-seed {
+    background-image: url("../../public/tomato-seed.png");
+}
+
+.skip-btn {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    width: 5rem;
+    height: 2rem;
+    background-color: white;
+    border-radius: 5px;
+    text-align: center;
+    line-height: 2rem;
+    cursor: pointer;
+    user-select: none;
+}
