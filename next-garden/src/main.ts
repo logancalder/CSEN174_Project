@@ -1,4 +1,5 @@
 // src/client.ts
+
 import {
     DIRT, FARMLAND, MAP_HEIGHT, MAP_WIDTH, TILE_SIZE, TileState,
 } from './constants';
@@ -14,8 +15,6 @@ const SEED = 4;
 
 const WHEAT = 0;
 const TOMATO = 1;
-
-
 
 export function setupGame(canvas: HTMLCanvasElement) {
     let currentTool: number = POINTER;
@@ -128,21 +127,4 @@ export function setupGame(canvas: HTMLCanvasElement) {
         }
         tileRenderer.drawMap();
     });
-}
-
-export function init() {
-    const container = document.getElementById('game-container');
-    if (!container) {
-        console.error('Game container not found');
-        return;
-    }
-
-    let canvas = container.querySelector('canvas');
-    if (!canvas) {
-        canvas = document.createElement('canvas');
-        canvas.style.display = 'block';
-        container.appendChild(canvas);
-    }
-
-    setupGame(canvas);
 }

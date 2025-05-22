@@ -1,4 +1,4 @@
-.garden_ui {
+body {
     margin: 0;
     background: #3e8948;
     display: flex;
@@ -60,7 +60,7 @@ canvas {
 }
 
 .tomato-seed {
-    background-image: url("../../public/tomato-seed.png");
+    background-image: url("/tomato-seed.png");
 }
 
 .skip-btn {
@@ -75,23 +75,4 @@ canvas {
     line-height: 2rem;
     cursor: pointer;
     user-select: none;
-}
-
-#back-to-dashboard {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    text-decoration: none;
-    background-color: #ffffffdd;
-    color: #333;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-weight: bold;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    z-index: 1000;
-    transition: background 0.2s ease;
-}
-
-#back-to-dashboard:hover {
-    background-color: #eee;
 }
