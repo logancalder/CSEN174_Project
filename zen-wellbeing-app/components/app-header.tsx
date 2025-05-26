@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Leaf, Menu, Home, User, LogOut, Droplets, Sun } from "lucide-react"
+import { Leaf, Menu, Home, User, LogOut, Droplets, Sun, ShoppingBag } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from "sonner"
@@ -155,6 +155,15 @@ export function AppHeader() {
             <Leaf className="h-4 w-4" />
             Garden
           </Link>
+          <Link
+            href="/shop"
+            className={`flex items-center gap-1 text-sm font-medium ${
+              isActive("/shop") ? "text-[#5d6b5d] border-b-2 border-[#6b8e6b]" : "text-[#6c6c6c] hover:text-[#5d6b5d]"
+            }`}
+          >
+            <ShoppingBag className="h-4 w-4" />
+            Shop
+          </Link>
         </nav>
 
         {/* Right section - Currency and User Menu */}
@@ -204,6 +213,15 @@ export function AppHeader() {
                 >
                   <Leaf className="h-4 w-4" />
                   Garden
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/shop"
+                  className="flex items-center gap-2 cursor-pointer text-[#5d6b5d] focus:bg-[#e5dfd3] focus:text-[#5d6b5d]"
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  Shop
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-[#e5dfd3]" />
