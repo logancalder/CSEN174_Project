@@ -22,50 +22,86 @@ interface Currency {
   sunlight: number
 }
 
+interface CurrencyPayload {
+  new: Currency
+  old: Currency
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE'
+}
+
 export function AppHeader() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClientComponentClient()
   const [currency, setCurrency] = useState<Currency>({ points: 0, water: 0, sunlight: 0 })
 
-  useEffect(() => {
-    const fetchCurrency = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          const { data, error } = await supabase
-            .from('currency')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single()
+  const fetchCurrency = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        const { data, error } = await supabase
+          .from('currency')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .single()
 
-          if (error) {
-            console.error('Error fetching currency:', error.message)
-            return
-          }
-
-          if (data) {
-            setCurrency({
-              points: data.points,
-              water: data.water,
-              sunlight: data.sunlight
-            })
-          }
+        if (error) {
+          console.error('Error fetching currency:', error.message)
+          return
         }
-      } catch (error) {
-        console.error('Error in fetchCurrency:', error)
-      }
-    }
 
+        if (data) {
+          setCurrency({
+            points: data.points,
+            water: data.water,
+            sunlight: data.sunlight
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Error in fetchCurrency:', error)
+    }
+  }
+
+  useEffect(() => {
     fetchCurrency()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Subscribe to auth changes
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         fetchCurrency()
       }
     })
 
-    return () => subscription.unsubscribe()
+    // Subscribe to currency changes
+    const currencySubscription = supabase
+      .channel('currency_changes')
+      .on(
+        'postgres_changes' as any,
+        {
+          event: '*',
+          schema: 'public',
+          table: 'currency',
+        },
+        (payload: CurrencyPayload) => {
+          if (payload.new) {
+            setCurrency({
+              points: payload.new.points,
+              water: payload.new.water,
+              sunlight: payload.new.sunlight
+            })
+          }
+        }
+      )
+      .subscribe()
+
+    // Set up auto-refresh every 5 seconds
+    const refreshInterval = setInterval(fetchCurrency, 5000)
+
+    return () => {
+      authSubscription.unsubscribe()
+      currencySubscription.unsubscribe()
+      clearInterval(refreshInterval)
+    }
   }, [supabase])
 
   const handleLogout = async () => {
@@ -195,6 +231,15 @@ export function AppHeader() {
             <DropdownMenuContent align="end" className="bg-[#f0ebe1] border-[#e5dfd3]">
               <DropdownMenuLabel className="text-[#5d6b5d]">My Account</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-[#e5dfd3]" />
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-2 cursor-pointer text-[#5d6b5d] focus:bg-[#e5dfd3] focus:text-[#5d6b5d]"
+                >
+                  <User className="h-4 w-4" />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={handleLogout}
                 className="flex items-center gap-2 cursor-pointer text-[#5d6b5d] focus:bg-[#e5dfd3] focus:text-[#5d6b5d]"

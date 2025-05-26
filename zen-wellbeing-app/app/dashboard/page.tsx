@@ -126,18 +126,39 @@ export default function DashboardPage() {
 
       let updateData: { steps?: number; water?: number; sleep?: number } = { steps: 0, water: 0, sleep: 0 }
       
-      // Set values based on activity type
-      if (activity.id === 'exercise') {
-        updateData.steps = Number(value)
-      }
-      if (activity.id === 'water') {
-        updateData.water = Number(value)
-      }
-      if (activity.id === 'sleep') {
-        updateData.sleep = Number(value)
+      // Fetch current input data first
+      const { data: existingInput, error: fetchError } = await supabase
+        .from('input_data')
+        .select('water, steps, sleep')
+        .eq('user_id', userId)
+        .single()
+
+      if (fetchError) {
+        console.error('Error fetching current input:', fetchError)
+        setError('Failed to fetch current data')
+        return
       }
 
-      // Update input_data table
+      console.log('existingInput', existingInput)
+
+      updateData.steps = (existingInput?.steps || 0)
+      updateData.water = existingInput?.water || 0
+      updateData.sleep = existingInput?.sleep || 0
+
+      // Set values based on activity type, adding to existing values
+      if (activity.id === 'exercise') {
+        updateData.steps = (existingInput?.steps || 0) + Number(value)
+      }
+      if (activity.id === 'water') {
+        updateData.water = (existingInput?.water || 0) + Number(value)
+      }
+      if (activity.id === 'sleep') {
+        updateData.sleep = (existingInput?.sleep || 0) + Number(value)
+      }
+
+      console.log('updateData', updateData)
+
+      // Update input_data table with combined values
       const { error: updateError, data: updateDataArr } = await supabase
         .from('input_data')
         .update(updateData)
@@ -152,6 +173,7 @@ export default function DashboardPage() {
 
       // If no row was updated in input_data, insert a new one
       if (!updateDataArr || updateDataArr.length === 0) {
+        console.log('inserting new data')
         const { error: insertError } = await supabase.from('input_data').insert([{
           user_id: userId,
           steps: updateData.steps ?? 0,
@@ -300,8 +322,9 @@ export default function DashboardPage() {
             .from('input_data')
             .select('water, steps, sleep')
             .eq('user_id', userId)
-            .gte('created_at', today.toISOString())
             .single()
+
+          console.log('inputData', inputData)
 
           if (!inputError && inputData) {
             setDailyProgress({

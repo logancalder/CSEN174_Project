@@ -49,8 +49,6 @@ export default function ProfilePage() {
   const [dailyProgress, setDailyProgress] = useState(75)
   const [user, setUser] = useState<any>(null)
   const [isEditingGoals, setIsEditingGoals] = useState(false)
-  const [isEditingProfile, setIsEditingProfile] = useState(false)
-  const [tempName, setTempName] = useState("")
   const [goals, setGoals] = useState({
     water: { value: "2.5", unit: " L" },
     exercise: { value: "10000", unit: "steps" },
@@ -65,7 +63,6 @@ export default function ProfilePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         setUser(session.user)
-        setTempName(session.user.user_metadata?.name || '')
         // Fetch user's goals
         const { data: goalsData, error } = await supabase
           .from('goals')
@@ -106,7 +103,6 @@ export default function ProfilePage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user)
-        setTempName(session.user.user_metadata?.name || '')
       }
     })
 
@@ -202,40 +198,6 @@ export default function ProfilePage() {
     })
   }
 
-  const handleSaveProfile = async () => {
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: { name: tempName }
-      })
-      
-      if (error) {
-        toast.error(error.message)
-        return
-      }
-
-      toast.success("Profile updated successfully!")
-      setIsEditingProfile(false)
-      // Refresh user data
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        setUser(session.user)
-      }
-    } catch (error) {
-      toast.error("An error occurred while updating your profile")
-    }
-  }
-
-  const handleCancelProfileEdit = () => {
-    setTempName(user?.user_metadata?.name || '')
-    setIsEditingProfile(false)
-  }
-
-  const activities = [
-    { name: "Water Intake", icon: Droplets, progress: 80 },
-    { name: "Exercise", icon: Footprints, progress: 60 },
-    { name: "Sleep", icon: Moon, progress: 85 },
-  ]
-
   return (
     <div className="min-h-screen bg-[#f5f2e9]">
       <AppHeader />
@@ -243,10 +205,10 @@ export default function ProfilePage() {
       <main className="container mx-auto px-4 py-8 mb-20">
         <div className="mb-8">
           <h1 className="text-3xl font-medium text-[#5d6b5d] mb-2">Your Profile</h1>
-          <p className="text-[#6c6c6c]">Track your progress and manage your account.</p>
+          <p className="text-[#6c6c6c]">Manage your account and goals.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="bg-[#f0ebe1] border-[#e5dfd3]">
             <CardHeader>
               <CardTitle className="text-[#5d6b5d]">Account Information</CardTitle>
@@ -257,52 +219,11 @@ export default function ProfilePage() {
                 <div className="h-16 w-16 rounded-full bg-[#e5dfd3] flex items-center justify-center">
                   <Leaf className="h-8 w-8 text-[#6b8e6b]" />
                 </div>
-                <div className="flex-1">
-                  {isEditingProfile ? (
-                    <div className="space-y-2">
-                      <Input
-                        value={tempName}
-                        onChange={(e) => setTempName(e.target.value)}
-                        className="border-[#d1c9b8] bg-[#f5f2e9] focus:border-[#6b8e6b] focus:ring-[#6b8e6b]"
-                        placeholder="Your name"
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <h3 className="font-medium text-[#5d6b5d]">{user?.user_metadata?.name || 'User'}</h3>
-                      <p className="text-sm text-[#6c6c6c]">{user?.email || 'Loading...'}</p>
-                    </div>
-                  )}
+                <div>
+                  <h3 className="font-medium text-[#5d6b5d]">{user?.user_metadata?.name || 'User'}</h3>
+                  <p className="text-sm text-[#6c6c6c]">{user?.email || 'Loading...'}</p>
                 </div>
               </div>
-              {isEditingProfile ? (
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 border-[#d1c9b8] text-[#5d6b5d]"
-                    onClick={handleCancelProfileEdit}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 border-[#d1c9b8] text-[#5d6b5d]"
-                    onClick={handleSaveProfile}
-                  >
-                    <Check className="h-4 w-4 mr-2" />
-                    Save
-                  </Button>
-                </div>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  className="w-full border-[#d1c9b8] text-[#5d6b5d]"
-                  onClick={() => setIsEditingProfile(true)}
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Edit Profile
-                </Button>
-              )}
             </CardContent>
           </Card>
 
@@ -411,56 +332,6 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </div>
-
-        <Card className="bg-[#f0ebe1] border-[#e5dfd3] mb-8">
-          <CardHeader>
-            <CardTitle className="text-[#5d6b5d]">Activity Progress</CardTitle>
-            <CardDescription className="text-[#8a8a8a]">Track your daily rituals</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {activities.map((activity) => (
-                <div key={activity.name} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <activity.icon className="h-4 w-4 text-[#6b8e6b]" />
-                      <span className="text-sm font-medium text-[#5d6b5d]">{activity.name}</span>
-                    </div>
-                    <span className="text-sm text-[#8a8a8a]">{activity.progress}%</span>
-                  </div>
-                  <Progress value={activity.progress} className="h-2 bg-[#e5dfd3]" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#f0ebe1] border-[#e5dfd3]">
-          <CardHeader>
-            <CardTitle className="text-[#5d6b5d]">Statistics</CardTitle>
-            <CardDescription className="text-[#8a8a8a]">Your journey so far</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-[#f5f2e9] p-4 rounded-md border border-[#e5dfd3] text-center">
-                <div className="text-2xl font-medium text-[#6b8e6b]">12</div>
-                <div className="text-sm text-[#6c6c6c]">Plants Grown</div>
-              </div>
-              <div className="bg-[#f5f2e9] p-4 rounded-md border border-[#e5dfd3] text-center">
-                <div className="text-2xl font-medium text-[#6b8e6b]">45</div>
-                <div className="text-sm text-[#6c6c6c]">Days Streak</div>
-              </div>
-              <div className="bg-[#f5f2e9] p-4 rounded-md border border-[#e5dfd3] text-center">
-                <div className="text-2xl font-medium text-[#6b8e6b]">1,200</div>
-                <div className="text-sm text-[#6c6c6c]">Steps Earned</div>
-              </div>
-              <div className="bg-[#f5f2e9] p-4 rounded-md border border-[#e5dfd3] text-center">
-                <div className="text-2xl font-medium text-[#6b8e6b]">85%</div>
-                <div className="text-sm text-[#6c6c6c]">Avg. Progress</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </main>
     </div>
   )
