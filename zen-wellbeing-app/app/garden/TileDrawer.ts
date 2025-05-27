@@ -561,19 +561,27 @@ export class TileRenderer {
 
           // there is a crop planted!
           if (tile.cropID > -1) {
+            const growth = tile.growthStage ?? 0;
+            const cropHeightInTiles = 2; // default to 1 if not defined
+            const sourceX = (2 + growth) * TILE_SIZE;
+            const sourceY = (2 * tile.cropID - 1) * TILE_SIZE;
+            const destX = x * TILE_SIZE;
+            const destY = (y - (cropHeightInTiles - 1)) * TILE_SIZE;
+            const drawHeight = cropHeightInTiles * TILE_SIZE;
+
             this.ctx.drawImage(
-              this.tileAssets.crops,
-              (2 + (tile.growthStage === undefined ? 0 : tile.growthStage)) *
+                this.tileAssets.crops,
+                sourceX,
+                sourceY,
                 TILE_SIZE,
-                (2 * tile.cropID) * TILE_SIZE,
-              TILE_SIZE,
-              TILE_SIZE,
-              x * TILE_SIZE,
-              y * TILE_SIZE,
-              TILE_SIZE,
-              TILE_SIZE,
+                drawHeight,
+                destX,
+                destY,
+                TILE_SIZE,
+                drawHeight,
             );
           }
+
         }
       }
     }

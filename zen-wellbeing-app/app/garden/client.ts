@@ -14,6 +14,7 @@ const SEED = 4;
 
 const WHEAT = 0;
 const TOMATO = 1;
+const GRAPE = 21;
 
 
 
@@ -28,12 +29,20 @@ export function setupGame(canvas: HTMLCanvasElement) {
     canvas.height = TILE_SIZE * MAP_HEIGHT;
 
     const tileMap = new TileMap();
+    (window as any).tileMap = tileMap; // expose to console
     let tileRenderer: TileRenderer;
 
     const tileAssets = new TileAssets(() => {
+        // Load saved state here
+        const savedState = localStorage.getItem("tilemap");
+        if (savedState) {
+            tileMap.loadState(savedState);
+        }
+
         tileRenderer = new TileRenderer(ctx, tileAssets, tileMap);
         tileRenderer.drawMap();
     });
+
 
     canvas.addEventListener('click', (e) => {
         const rect = canvas.getBoundingClientRect();
@@ -64,6 +73,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
                 }
                 tileMap.setTile(x, y, currentTile);
             }
+            tileMap.saveState();
             tileRenderer.drawMap();
         }
     });
@@ -77,12 +87,14 @@ export function setupGame(canvas: HTMLCanvasElement) {
     fakeCursor.style.backgroundSize = 'contain';
     fakeCursor.style.backgroundRepeat = 'no-repeat';
     fakeCursor.style.imageRendering = 'pixelated';
-    document.body.appendChild(fakeCursor);
+    // document.body.appendChild(fakeCursor);
 
     document.addEventListener('mousemove', (e) => {
         fakeCursor.style.left = `${e.clientX + 16}px`;
         fakeCursor.style.top = `${e.clientY + 16}px`;
     });
+
+
 
     const hotbarSlots = document.querySelectorAll('.hotbar-slot');
     hotbarSlots.forEach((slot) => {
@@ -106,6 +118,9 @@ export function setupGame(canvas: HTMLCanvasElement) {
                 } else if (slot.classList.contains('tomato-seed')) {
                     fakeCursor.style.backgroundImage = 'url("tomato-seed.png")';
                     currentCropID = TOMATO;
+                } else if (slot.classList.contains('grape-seed')) {
+                    fakeCursor.style.backgroundImage = 'url("grape-seed.png")';
+                    currentCropID = GRAPE;
                 }
                 currentTool = SEED;
             } else {
@@ -126,6 +141,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
                 tileMap.setTile(i, j, tile);
             }
         }
+        tileMap.saveState();
         tileRenderer.drawMap();
     });
 }

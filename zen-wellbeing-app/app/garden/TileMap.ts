@@ -1,14 +1,9 @@
 // TileMap.ts
 // Handles the current farm's tile states
 
-import {
-  MAP_WIDTH,
-  MAP_HEIGHT,
-  GRASS,
-  DIRT,
-  TileState,
-  VOID,
-} from './constants.ts';
+import {DIRT, GRASS, MAP_HEIGHT, MAP_WIDTH, TileState, VOID,} from './constants';
+import { TileAssets } from './TileAssets';
+import { TileRenderer } from "./TileDrawer";
 
 export class TileMap {
   map: TileState[][];
@@ -49,4 +44,19 @@ export class TileMap {
 
     this.map[y][x] = tile;
   }
+
+  saveState(): void {
+    localStorage.setItem("tilemap", JSON.stringify(this.map));
+  }
+
+  loadState(state: string): boolean {
+    try {
+      this.map = JSON.parse(state);
+      return true;
+    } catch (e) {
+      console.error('Failed to load state:', e);
+      return false;
+    }
+  }
+
 }

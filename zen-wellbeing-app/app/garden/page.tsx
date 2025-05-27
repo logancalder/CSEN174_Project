@@ -2,7 +2,8 @@
 'use client';
 
 import {useEffect} from 'react';
-import './style.css'; // optional if you have tool icons
+import './style.css';
+import {AppHeader} from "@/components/app-header"; // optional if you have tool icons
 
 export default function GardenPage() {
     useEffect(() => {
@@ -13,7 +14,7 @@ export default function GardenPage() {
 
     return (
         <>
-            <a href="/dashboard" id="back-to-dashboard">← Back to Dashboard</a>
+            <AppHeader />
             <div className="garden_ui">
                 <div id="game-container"/>
                 <div className="hotbar">
@@ -23,6 +24,7 @@ export default function GardenPage() {
                     <div className="hotbar-slot pickaxe"></div>
                     <div className="hotbar-slot seed wheat-seed"></div>
                     <div className="hotbar-slot seed tomato-seed"></div>
+                    <div className="hotbar-slot seed grape-seed"></div>
                 </div>
                 <div className="skip-btn">⏩ Skip</div>
             </div>

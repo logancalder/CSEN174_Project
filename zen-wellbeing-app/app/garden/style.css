@@ -60,7 +60,11 @@ canvas {
 }
 
 .tomato-seed {
-    background-image: url("../../public/tomato-seed.png");
+    background-image: url("/tomato-seed.png");
+}
+
+.grape-seed {
+    background-image: url("/grape-seed.png");
 }
 
 .skip-btn {
