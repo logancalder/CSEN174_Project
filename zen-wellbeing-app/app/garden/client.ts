@@ -1,10 +1,11 @@
 // src/client.ts
 import {
-    DIRT, FARMLAND, MAP_HEIGHT, MAP_WIDTH, TILE_SIZE, TileState,
+    DIRT, FARMLAND, MAP_HEIGHT, MAP_WIDTH, TILE_SIZE, TileState, CropType, cropTypes
 } from './constants';
 import { TileAssets } from './TileAssets';
 import { TileMap } from "./TileMap";
 import { TileRenderer } from "./TileDrawer";
+import { Inventory } from "./Inventory";
 
 const POINTER = 0;
 const WATERING_CAN = 1;
@@ -12,15 +13,28 @@ const HOE = 2;
 const PICKAXE = 3;
 const SEED = 4;
 
-const WHEAT = 0;
-const TOMATO = 1;
-const GRAPE = 21;
+
+
+const cropIDs = {
+    "wheat": 0,
+    "tomato": 1,
+    "grape": 21
+}
+
+const cropNamesByID = Object.fromEntries(
+    Object.entries(cropIDs).map(([name, id]) => [id, name])
+);
+
+const inventory = new Inventory();
+(window as any).inventory = inventory; // expose to console
+
+
 
 
 
 export function setupGame(canvas: HTMLCanvasElement) {
     let currentTool: number = POINTER;
-    let currentCropID: number = WHEAT;
+    let currentCropID: number;
 
     const ctx = canvas.getContext('2d')!;
     ctx.imageSmoothingEnabled = false;
@@ -42,6 +56,12 @@ export function setupGame(canvas: HTMLCanvasElement) {
         tileRenderer = new TileRenderer(ctx, tileAssets, tileMap);
         tileRenderer.drawMap();
     });
+
+    const savedInventory = localStorage.getItem("inventory");
+    if (savedInventory) {
+        inventory.loadState(savedInventory);
+    }
+
 
 
     canvas.addEventListener('click', (e) => {
@@ -70,6 +90,14 @@ export function setupGame(canvas: HTMLCanvasElement) {
                 } else if (currentTool == SEED && currentTile.cropID < 0) {
                     currentTile.cropID = currentCropID;
                     currentTile.growthStage = 0;
+                } else if (currentTool == POINTER && currentTile.cropID > -1 && currentTile.growthStage == 3) {
+                    inventory.addCrop(cropNamesByID[currentTile.cropID] as CropType);
+                    currentTile.type = FARMLAND;
+                    if(currentTile.cropID != cropIDs["grape"]) {
+                        currentTile.cropID = -1;
+                    }
+                    currentTile.growthStage = 0;
+                    // console.log(inventory.getInventory());
                 }
                 tileMap.setTile(x, y, currentTile);
             }
@@ -112,15 +140,13 @@ export function setupGame(canvas: HTMLCanvasElement) {
                 fakeCursor.style.backgroundImage = 'url("pickaxe.png")';
                 currentTool = PICKAXE;
             } else if (slot.classList.contains('seed')) {
-                if (slot.classList.contains('wheat-seed')) {
-                    fakeCursor.style.backgroundImage = 'url("wheat-seed.png")';
-                    currentCropID = WHEAT;
-                } else if (slot.classList.contains('tomato-seed')) {
-                    fakeCursor.style.backgroundImage = 'url("tomato-seed.png")';
-                    currentCropID = TOMATO;
-                } else if (slot.classList.contains('grape-seed')) {
-                    fakeCursor.style.backgroundImage = 'url("grape-seed.png")';
-                    currentCropID = GRAPE;
+                for (const type of cropTypes) {
+                    if (slot.classList.contains(`${type}-seed`)) {
+                        fakeCursor.style.backgroundImage = `url("${type}-seed.png")`;
+                        currentCropID = cropIDs[type];
+                        slot.textContent = inventory.getInventory().seeds[type].toString();
+                        break;
+                    }
                 }
                 currentTool = SEED;
             } else {
@@ -130,12 +156,23 @@ export function setupGame(canvas: HTMLCanvasElement) {
         });
     });
 
+    // initialize hotbar
+    hotbarSlots.forEach((slot) => {
+        for (const type of cropTypes) {
+            if (slot.classList.contains(`${type}-seed`)) {
+                fakeCursor.style.backgroundImage = `url("${type}-seed.png")`;
+                currentCropID = cropIDs[type];
+                slot.textContent = inventory.getInventory().seeds[type].toString();
+            }
+        }
+    });
+
     const skipButton = document.querySelector('.skip-btn');
     skipButton?.addEventListener('click', () => {
         for (let i = 0; i < MAP_WIDTH; i++) {
             for (let j = 0; j < MAP_HEIGHT; j++) {
                 const tile = tileMap.getTile(i, j);
-                if (tile.watered) {
+                if (tile.watered && tile.cropID > -1) {
                     tile.growthStage = Math.min(3, tile.growthStage + 1);
                 }
                 tileMap.setTile(i, j, tile);

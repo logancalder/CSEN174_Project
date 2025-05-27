@@ -32,6 +32,10 @@ canvas {
     background-size: 4rem;
     background-position: center;
     border: 3px solid gray;
+
+    text-align: right;
+    color: white;
+    text-shadow: -1px -1px 1px rgba(255,255,255,.1), 1px 1px 1px rgba(0,0,0,.5);
 }
 
 .selected.hotbar-slot {
