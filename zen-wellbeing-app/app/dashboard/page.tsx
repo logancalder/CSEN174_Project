@@ -103,8 +103,8 @@ export default function DashboardPage() {
   // Add scoring function
   const calculateScore = (actual: number, goal: number): number => {
     if (goal === 0) return 0; // Prevent division by zero
-    const ratio = actual / goal;
-    return ratio <= 1.2 ? ratio : 2 - ratio;
+    // Return 100 if goal is met or exceeded, otherwise return proportional points
+    return actual >= goal ? 100 : Math.round((actual / goal) * 100);
   }
 
   const logActivity = async (activity: Activity) => {
@@ -139,24 +139,22 @@ export default function DashboardPage() {
         return
       }
 
-      console.log('existingInput', existingInput)
-
-      updateData.steps = (existingInput?.steps || 0)
-      updateData.water = existingInput?.water || 0
-      updateData.sleep = existingInput?.sleep || 0
-
       // Set values based on activity type, adding to existing values
       if (activity.id === 'exercise') {
         updateData.steps = (existingInput?.steps || 0) + Number(value)
+        updateData.water = existingInput?.water || 0
+        updateData.sleep = existingInput?.sleep || 0
       }
       if (activity.id === 'water') {
         updateData.water = (existingInput?.water || 0) + Number(value)
+        updateData.steps = existingInput?.steps || 0
+        updateData.sleep = existingInput?.sleep || 0
       }
       if (activity.id === 'sleep') {
         updateData.sleep = (existingInput?.sleep || 0) + Number(value)
+        updateData.steps = existingInput?.steps || 0
+        updateData.water = existingInput?.water || 0
       }
-
-      console.log('updateData', updateData)
 
       // Update input_data table with combined values
       const { error: updateError, data: updateDataArr } = await supabase
@@ -173,7 +171,6 @@ export default function DashboardPage() {
 
       // If no row was updated in input_data, insert a new one
       if (!updateDataArr || updateDataArr.length === 0) {
-        console.log('inserting new data')
         const { error: insertError } = await supabase.from('input_data').insert([{
           user_id: userId,
           steps: updateData.steps ?? 0,
@@ -200,33 +197,13 @@ export default function DashboardPage() {
         return
       }
 
-      // Fetch current input data
-      const { data: currentInput, error: inputError } = await supabase
-        .from('input_data')
-        .select('water, steps, sleep')
-        .eq('user_id', userId)
-        .single()
+      // Calculate scores for each metric - each gives up to 100 points
+      const waterScore = calculateScore(updateData.water ?? 0, goals?.water ?? 0)
+      const stepsScore = calculateScore(updateData.steps ?? 0, goals?.steps ?? 0)
+      const sleepScore = calculateScore(updateData.sleep ?? 0, goals?.sleep ?? 0)
 
-      if (inputError) {
-        console.error('Error fetching input data:', inputError)
-        setError('Failed to fetch input data')
-        return
-      }
-
-      // Calculate scores for each metric
-      const waterScore = calculateScore(currentInput?.water ?? 0, goals?.water ?? 0)
-      const stepsScore = calculateScore(currentInput?.steps ?? 0, goals?.steps ?? 0)
-      const sleepScore = calculateScore(currentInput?.sleep ?? 0, goals?.sleep ?? 0)
-
-      // Calculate total points
-      let totalPoints = Math.round(
-        (33.3 * waterScore) + 
-        (33.3 * stepsScore) + 
-        (33.3 * sleepScore)
-      )
-
-      // Ensure points are not negative
-      totalPoints = Math.max(0, totalPoints)
+      // Calculate total points - each category can contribute up to 100 points
+      const totalPoints = waterScore + stepsScore + sleepScore
 
       // Fetch current currency values
       const { data: currentCurrency, error: currencyFetchError } = await supabase
@@ -246,13 +223,13 @@ export default function DashboardPage() {
         .from('currency')
         .upsert({
           user_id: userId,
-          points: (currentCurrency?.points ?? 0) + totalPoints,
+          points: totalPoints, // Store total points (max 300, 100 from each category)
           water: activity.id === 'water' 
-            ? (currentCurrency?.water ?? 0) + Number(value) 
-            : (currentCurrency?.water ?? 0),
+            ? updateData.water ?? 0 
+            : (currentCurrency?.water ?? 0), // Maintain existing water value if not updating water
           sunlight: activity.id === 'sleep' 
-            ? (currentCurrency?.sunlight ?? 0) + Number(value) 
-            : (currentCurrency?.sunlight ?? 0)
+            ? updateData.sleep ?? 0 
+            : (currentCurrency?.sunlight ?? 0) // Maintain existing sunlight value if not updating sleep
         }, {
           onConflict: 'user_id'
         })
