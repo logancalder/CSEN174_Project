@@ -6,6 +6,7 @@ import { TileAssets } from './TileAssets';
 import { TileMap } from "./TileMap";
 import { TileRenderer } from "./TileDrawer";
 import { Inventory } from "./Inventory";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 const POINTER = 0;
 const WATERING_CAN = 1;
@@ -35,6 +36,7 @@ const inventory = new Inventory();
 export function setupGame(canvas: HTMLCanvasElement) {
     let currentTool: number = POINTER;
     let currentCropID: number;
+    const supabase = createClientComponentClient();
 
     const ctx = canvas.getContext('2d')!;
     ctx.imageSmoothingEnabled = false;
@@ -62,9 +64,25 @@ export function setupGame(canvas: HTMLCanvasElement) {
         inventory.loadState(savedInventory);
     }
 
+    // Function to update UI with current inventory counts
+    const updateInventoryUI = () => {
+        const hotbarSlots = document.querySelectorAll('.hotbar-slot');
+        hotbarSlots.forEach((slot) => {
+            for (const type of cropTypes) {
+                if (slot.classList.contains(`${type}-seed`)) {
+                    slot.textContent = inventory.getInventory().seeds[type].toString();
+                }
+            }
+        });
+    };
 
+    // Register the callback
+    inventory.addOnChangeCallback(updateInventoryUI);
 
-    canvas.addEventListener('click', (e) => {
+    // Initial UI update
+    updateInventoryUI();
+
+    canvas.addEventListener('click', async (e) => {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
@@ -81,7 +99,30 @@ export function setupGame(canvas: HTMLCanvasElement) {
                 });
             } else if (currentTile.type == FARMLAND) {
                 if (currentTool == WATERING_CAN) {
-                    currentTile.watered = true;
+                    // Get current session
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session?.user) {
+                        // Get current currency
+                        const { data: currencyData } = await supabase
+                            .from('currency')
+                            .select('water')
+                            .eq('user_id', session.user.id)
+                            .single();
+
+                        if (currencyData && currencyData.water >= 10) {
+                            // Update currency
+                            await supabase
+                                .from('currency')
+                                .update({ water: currencyData.water - 10 })
+                                .eq('user_id', session.user.id);
+                            
+                            currentTile.watered = true;
+                        } else {
+                            // Not enough water points
+                            alert('Not enough water points!');
+                            return;
+                        }
+                    }
                 } else if (currentTool == PICKAXE) {
                     currentTile.type = DIRT;
                     currentTile.watered = false;
@@ -90,6 +131,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
                 } else if (currentTool == SEED && currentTile.cropID < 0) {
                     currentTile.cropID = currentCropID;
                     currentTile.growthStage = 0;
+                    inventory.removeSeed(cropNamesByID[currentCropID] as CropType);
                 } else if (currentTool == POINTER && currentTile.cropID > -1 && currentTile.growthStage == 3) {
                     inventory.addCrop(cropNamesByID[currentTile.cropID] as CropType);
                     currentTile.type = FARMLAND;
