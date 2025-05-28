@@ -23,7 +23,7 @@ const cropIDs = {
 }
 
 const cropNamesByID = Object.fromEntries(
-    Object.entries(cropIDs).map(([name, id]) => [id, name.charAt(0).toUpperCase() + name.slice(1)])
+    Object.entries(cropIDs).map(([name, id]) => [id, name.charAt(0).toLowerCase() + name.slice(1)])
 );
 
 const inventory = new Inventory();
@@ -117,22 +117,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
                         const cropId = currentTile.cropID;
 
                         if (cropId > -1) { // Check if a crop is planted
-                            const cropName = cropNamesByID[cropId] as CropType;
-
-                            // Fetch min_water for the crop from meta_plants table
-                            const { data: plantData, error: plantError } = await supabase
-                                .from('meta_plants')
-                                .select('min_water')
-                                .eq('name', cropName)
-                                .single();
-
-                            if (plantError) {
-                                console.error(`Error fetching min_water for ${cropName}:`, plantError);
-                                alert('Failed to get crop water cost.');
-                                return;
-                            }
-
-                            const waterCost = plantData?.min_water || 0; // Default to 0 if not found or null
+                            const waterCost = 10; // Fixed water cost of 10
 
                             // Get current currency
                             const { data: currencyData, error: currencyError } = await supabase
@@ -167,9 +152,40 @@ export function setupGame(canvas: HTMLCanvasElement) {
                                 return;
                             }
                         } else {
-                             // Optional: Handle watering bare farmland (no crop)
-                             console.log('Watering bare farmland.');
-                             currentTile.watered = true; // Still mark as watered
+                            // Handle watering bare farmland (no crop)
+                            const waterCost = 10; // Same fixed water cost for bare farmland
+
+                            // Get current currency
+                            const { data: currencyData, error: currencyError } = await supabase
+                                .from('currency')
+                                .select('water')
+                                .eq('user_id', session.user.id)
+                                .single();
+
+                            if (currencyError) {
+                                console.error('Error fetching currency:', currencyError);
+                                alert('Failed to get current water points.');
+                                return;
+                            }
+
+                            if (currencyData && currencyData.water >= waterCost) {
+                                // Update currency
+                                const { error: updateError } = await supabase
+                                    .from('currency')
+                                    .update({ water: currencyData.water - waterCost })
+                                    .eq('user_id', session.user.id);
+
+                                if (updateError) {
+                                    console.error('Error updating currency:', updateError);
+                                    alert('Failed to update water points.');
+                                } else {
+                                    currentTile.watered = true;
+                                }
+                            } else {
+                                // Not enough water points
+                                alert(`Not enough water points! Need ${waterCost}.`);
+                                return;
+                            }
                         }
                     } else {
                         alert('Please log in to water plants.');

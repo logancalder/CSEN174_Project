@@ -24,7 +24,7 @@ export default function GardenPage() {
                     <div className="hotbar-slot pickaxe"></div>
                     <div className="hotbar-slot seed wheat-seed"></div>
                     <div className="hotbar-slot seed tomato-seed"></div>
-                    <div className="hotbar-slot seed grape-seed"></div>
+                    <div className="hotbar-slot seed grapes-seed"></div>
                 </div>
                 <div className="skip-btn">⏩ Skip</div>
             </div>

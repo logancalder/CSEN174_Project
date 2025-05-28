@@ -33,7 +33,7 @@ export class Inventory {
     async loadFromDatabase(supabase: SupabaseClient, userId: string): Promise<void> {
         const { data, error } = await supabase
             .from('inventory')
-            .select('wheat, tomato, grapes')
+            .select('Wheat, Tomato, Grapes')
             .eq('user_id', userId)
             .single();
 
@@ -42,9 +42,9 @@ export class Inventory {
             // Optionally handle specific errors like no row found
             // For now, we'll just use the initial zero inventory
         } else if (data) {
-            this.inventory.seeds.wheat = data.wheat || 0;
-            this.inventory.seeds.tomato = data.tomato || 0;
-            this.inventory.seeds.grapes = data.grapes || 0;
+            this.inventory.seeds.wheat = data.Wheat || 0;
+            this.inventory.seeds.tomato = data.Tomato || 0;
+            this.inventory.seeds.grapes = data.Grapes || 0;
             // Note: Crops are not stored in the database table based on the image.
             // If they should be persisted, the table schema and loading logic need adjustment.
         }
@@ -66,7 +66,7 @@ export class Inventory {
         if (supabase && userId) {
              const { error } = await supabase
                 .from('inventory')
-                .update({ [type]: this.inventory.seeds[type] }) // Update the specific seed type column
+                .update({ [type.charAt(0).toUpperCase() + type.slice(1)]: this.inventory.seeds[type] }) // Capitalize first letter for DB column
                 .eq('user_id', userId);
 
             if (error) {
@@ -86,7 +86,7 @@ export class Inventory {
             if (supabase && userId) {
                 const { error } = await supabase
                     .from('inventory')
-                    .update({ [type]: this.inventory.seeds[type] }) // Update the specific seed type column
+                    .update({ [type.charAt(0).toUpperCase() + type.slice(1)]: this.inventory.seeds[type] }) // Capitalize first letter for DB column
                     .eq('user_id', userId);
 
                 if (error) {
