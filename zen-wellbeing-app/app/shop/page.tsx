@@ -13,7 +13,6 @@ interface Plant {
   name: string
   description: string
   min_sunlight: number
-  min_water: number
   cost: number
 }
 
@@ -91,10 +90,6 @@ export default function ShopPage() {
       }
 
       // Check if user has enough resources
-      if (currency.water < plant.min_water) {
-        toast.error(`Not enough water! You need ${plant.min_water} units`)
-        return
-      }
       if (currency.sunlight < plant.min_sunlight) {
         toast.error(`Not enough sunlight! You need ${plant.min_sunlight} units`)
         return
@@ -108,7 +103,6 @@ export default function ShopPage() {
       const { error: transactionError } = await supabase.rpc('purchase_plant', {
         p_user_id: session.user.id,
         p_plant_id: plant.id,
-        p_water_cost: plant.min_water,
         p_sunlight_cost: plant.min_sunlight,
         p_points_cost: plant.cost
       })
@@ -122,7 +116,6 @@ export default function ShopPage() {
       // Update local currency state
       setCurrency(prev => ({
         ...prev,
-        water: prev.water - plant.min_water,
         sunlight: prev.sunlight - plant.min_sunlight,
         points: prev.points - plant.cost
       }))
@@ -163,11 +156,7 @@ export default function ShopPage() {
                 <CardDescription className="text-[#8a8a8a]">{plant.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <Droplets className="h-4 w-4 text-[#6a8d92]" />
-                    <span className="text-[#6c6c6c]">{plant.min_water} units</span>
-                  </div>
+                <div className="flex items-center justify-center text-sm">
                   <div className="flex items-center gap-2">
                     <Sun className="h-4 w-4 text-[#e6b800]" />
                     <span className="text-[#6c6c6c]">{plant.min_sunlight} units</span>
@@ -179,7 +168,7 @@ export default function ShopPage() {
                 <Button
                   className="w-full bg-[#6b8e6b] hover:bg-[#5d6b5d] text-white"
                   onClick={() => handlePurchase(plant)}
-                  disabled={currency.water < plant.min_water || currency.sunlight < plant.min_sunlight || currency.points < plant.cost}
+                  disabled={currency.sunlight < plant.min_sunlight || currency.points < plant.cost}
                 >
                   <Leaf className="h-4 w-4 mr-2" />
                   Purchase
