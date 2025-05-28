@@ -7,8 +7,8 @@ export const DIRT = 0;
 export const GRASS = 1;
 export const FARMLAND = 2;
 
-export type CropType = 'wheat' | 'tomato' | 'grape';
-export const cropTypes: CropType[] = ['wheat', 'tomato', 'grape'];
+export type CropType = 'wheat' | 'tomato' | 'grapes';
+export const cropTypes: CropType[] = ['wheat', 'tomato', 'grapes'];
 
 export interface Tile {
     x: number;

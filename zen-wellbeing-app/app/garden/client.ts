@@ -19,11 +19,11 @@ const SEED = 4;
 const cropIDs = {
     "wheat": 0,
     "tomato": 1,
-    "grape": 21
+    "grapes": 21
 }
 
 const cropNamesByID = Object.fromEntries(
-    Object.entries(cropIDs).map(([name, id]) => [id, name])
+    Object.entries(cropIDs).map(([name, id]) => [id, name.charAt(0).toUpperCase() + name.slice(1)])
 );
 
 const inventory = new Inventory();
@@ -48,21 +48,34 @@ export function setupGame(canvas: HTMLCanvasElement) {
     (window as any).tileMap = tileMap; // expose to console
     let tileRenderer: TileRenderer;
 
-    const tileAssets = new TileAssets(() => {
-        // Load saved state here
+    const tileAssets = new TileAssets(async () => { // Make this async to await inventory loading
+        // Load saved state here (tilemap still from local storage)
         const savedState = localStorage.getItem("tilemap");
         if (savedState) {
             tileMap.loadState(savedState);
         }
 
+        // Load inventory from database after session is available
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+            await inventory.loadFromDatabase(supabase, session.user.id);
+        } else {
+            console.warn("No user session found, using default zero inventory.");
+        }
+
+
         tileRenderer = new TileRenderer(ctx, tileAssets, tileMap);
         tileRenderer.drawMap();
+
+        // Initial UI update after loading inventory
+        updateInventoryUI();
     });
 
-    const savedInventory = localStorage.getItem("inventory");
-    if (savedInventory) {
-        inventory.loadState(savedInventory);
-    }
+    // Remove local storage inventory loading
+    // const savedInventory = localStorage.getItem("inventory");
+    // if (savedInventory) {
+    //     inventory.loadState(savedInventory);
+    // }
 
     // Function to update UI with current inventory counts
     const updateInventoryUI = () => {
@@ -70,6 +83,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
         hotbarSlots.forEach((slot) => {
             for (const type of cropTypes) {
                 if (slot.classList.contains(`${type}-seed`)) {
+                    // Ensure the text content is updated with the current seed count from the inventory instance
                     slot.textContent = inventory.getInventory().seeds[type].toString();
                 }
             }
@@ -78,9 +92,6 @@ export function setupGame(canvas: HTMLCanvasElement) {
 
     // Register the callback
     inventory.addOnChangeCallback(updateInventoryUI);
-
-    // Initial UI update
-    updateInventoryUI();
 
     canvas.addEventListener('click', async (e) => {
         const rect = canvas.getBoundingClientRect();
@@ -102,26 +113,67 @@ export function setupGame(canvas: HTMLCanvasElement) {
                     // Get current session
                     const { data: { session } } = await supabase.auth.getSession();
                     if (session?.user) {
-                        // Get current currency
-                        const { data: currencyData } = await supabase
-                            .from('currency')
-                            .select('water')
-                            .eq('user_id', session.user.id)
-                            .single();
+                        // Get the crop on the current tile
+                        const cropId = currentTile.cropID;
 
-                        if (currencyData && currencyData.water >= 10) {
-                            // Update currency
-                            await supabase
+                        if (cropId > -1) { // Check if a crop is planted
+                            const cropName = cropNamesByID[cropId] as CropType;
+
+                            // Fetch min_water for the crop from meta_plants table
+                            const { data: plantData, error: plantError } = await supabase
+                                .from('meta_plants')
+                                .select('min_water')
+                                .eq('name', cropName)
+                                .single();
+
+                            if (plantError) {
+                                console.error(`Error fetching min_water for ${cropName}:`, plantError);
+                                alert('Failed to get crop water cost.');
+                                return;
+                            }
+
+                            const waterCost = plantData?.min_water || 0; // Default to 0 if not found or null
+
+                            // Get current currency
+                            const { data: currencyData, error: currencyError } = await supabase
                                 .from('currency')
-                                .update({ water: currencyData.water - 10 })
-                                .eq('user_id', session.user.id);
-                            
-                            currentTile.watered = true;
+                                .select('water')
+                                .eq('user_id', session.user.id)
+                                .single();
+
+                            if (currencyError) {
+                                console.error('Error fetching currency:', currencyError);
+                                alert('Failed to get current water points.');
+                                return;
+                            }
+
+                            if (currencyData && currencyData.water >= waterCost) {
+                                // Update currency
+                                const { error: updateError } = await supabase
+                                    .from('currency')
+                                    .update({ water: currencyData.water - waterCost })
+                                    .eq('user_id', session.user.id);
+
+                                if (updateError) {
+                                    console.error('Error updating currency:', updateError);
+                                    alert('Failed to update water points.');
+                                } else {
+                                    currentTile.watered = true;
+                                    // Currency UI update is likely handled by a different component
+                                }
+                            } else {
+                                // Not enough water points
+                                alert(`Not enough water points! Need ${waterCost}.`);
+                                return;
+                            }
                         } else {
-                            // Not enough water points
-                            alert('Not enough water points!');
-                            return;
+                             // Optional: Handle watering bare farmland (no crop)
+                             console.log('Watering bare farmland.');
+                             currentTile.watered = true; // Still mark as watered
                         }
+                    } else {
+                        alert('Please log in to water plants.');
+                        return;
                     }
                 } else if (currentTool == PICKAXE) {
                     currentTile.type = DIRT;
@@ -129,13 +181,24 @@ export function setupGame(canvas: HTMLCanvasElement) {
                     currentTile.cropID = -1;
                     currentTile.growthStage = 0;
                 } else if (currentTool == SEED && currentTile.cropID < 0) {
-                    currentTile.cropID = currentCropID;
-                    currentTile.growthStage = 0;
-                    inventory.removeSeed(cropNamesByID[currentCropID] as CropType);
+                    const seedType = cropNamesByID[currentCropID] as CropType;
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session?.user) {
+                        if (await inventory.removeSeed(seedType, 1, supabase, session.user.id)) {
+                            currentTile.cropID = currentCropID;
+                            currentTile.growthStage = 0;
+                        } else {
+                            alert(`Not enough ${seedType} seeds!`);
+                            return; // Stop processing if not enough seeds
+                        }
+                    } else {
+                        alert('Please log in to plant seeds.');
+                        return; // Stop processing if no user session
+                    }
                 } else if (currentTool == POINTER && currentTile.cropID > -1 && currentTile.growthStage == 3) {
                     inventory.addCrop(cropNamesByID[currentTile.cropID] as CropType);
                     currentTile.type = FARMLAND;
-                    if(currentTile.cropID != cropIDs["grape"]) {
+                    if(currentTile.cropID != cropIDs["grapes"]) {
                         currentTile.cropID = -1;
                     }
                     currentTile.growthStage = 0;
@@ -173,20 +236,21 @@ export function setupGame(canvas: HTMLCanvasElement) {
             slot.classList.add('selected');
 
             if (slot.classList.contains('watering-can')) {
-                fakeCursor.style.backgroundImage = 'url("watering-can.png")';
+                fakeCursor.style.backgroundImage = 'url("/watering-can.png")'; 
                 currentTool = WATERING_CAN;
             } else if (slot.classList.contains('hoe')) {
-                fakeCursor.style.backgroundImage = 'url("hoe.png")';
+                fakeCursor.style.backgroundImage = 'url("/hoe.png")';
                 currentTool = HOE;
             } else if (slot.classList.contains('pickaxe')) {
-                fakeCursor.style.backgroundImage = 'url("pickaxe.png")';
+                fakeCursor.style.backgroundImage = 'url("/pickaxe.png")';
                 currentTool = PICKAXE;
             } else if (slot.classList.contains('seed')) {
                 for (const type of cropTypes) {
                     if (slot.classList.contains(`${type}-seed`)) {
-                        fakeCursor.style.backgroundImage = `url("${type}-seed.png")`;
+                        fakeCursor.style.backgroundImage = `url("/${type}-seed.png")`;
                         currentCropID = cropIDs[type];
-                        slot.textContent = inventory.getInventory().seeds[type].toString();
+                        // The textContent update is now handled by the updateInventoryUI callback
+                        // slot.textContent = inventory.getInventory().seeds[type].toString();
                         break;
                     }
                 }
@@ -195,19 +259,24 @@ export function setupGame(canvas: HTMLCanvasElement) {
                 currentTool = POINTER;
                 fakeCursor.style.backgroundImage = 'none';
             }
+             // Ensure cursor is updated when tool changes, before any potential inventory change
+            if (currentTool != SEED) {
+                 updateInventoryUI(); // Update UI for non-seed tools to show correct counts
+            }
         });
     });
 
-    // initialize hotbar
-    hotbarSlots.forEach((slot) => {
-        for (const type of cropTypes) {
-            if (slot.classList.contains(`${type}-seed`)) {
-                fakeCursor.style.backgroundImage = `url("${type}-seed.png")`;
-                currentCropID = cropIDs[type];
-                slot.textContent = inventory.getInventory().seeds[type].toString();
-            }
-        }
-    });
+    // initialize hotbar - this initial update is now handled after tileAssets load
+    // hotbarSlots.forEach((slot) => {
+    //     for (const type of cropTypes) {
+    //         if (slot.classList.contains(`${type}-seed`)) {
+    //             fakeCursor.style.backgroundImage = `url("${type}-seed.png")`;
+    //             currentCropID = cropIDs[type];
+    //             slot.textContent = inventory.getInventory().seeds[type].toString();
+    //         }
+    //     }
+    // });
+
 
     const skipButton = document.querySelector('.skip-btn');
     skipButton?.addEventListener('click', () => {
