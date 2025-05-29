@@ -373,7 +373,7 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <Progress 
-                    value={(dailyProgress.water.current / dailyProgress.water.goal) * 100} 
+                    value={Math.min((dailyProgress.water.current / dailyProgress.water.goal) * 100, 100)} 
                     className="h-2 bg-[#e5dfd3]" 
                   />
                 </div>
@@ -399,7 +399,7 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <Progress 
-                    value={(dailyProgress.sleep.current / dailyProgress.sleep.goal) * 100} 
+                    value={Math.min((dailyProgress.sleep.current / dailyProgress.sleep.goal) * 100, 100)} 
                     className="h-2 bg-[#e5dfd3]" 
                   />
                 </div>
