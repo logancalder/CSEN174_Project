@@ -205,6 +205,10 @@ export default function DashboardPage() {
       // Calculate total points - each category can contribute up to 100 points
       const totalPoints = waterScore + stepsScore + sleepScore
 
+      // Calculate percentage of goal completion for water and sleep (capped at 100)
+      const waterPercentage = Math.min(((updateData.water ?? 0) / (goals?.water ?? 1)) * 100, 100)
+      const sleepPercentage = Math.min(((updateData.sleep ?? 0) / (goals?.sleep ?? 1)) * 100, 100)
+
       // Fetch current currency values
       const { data: currentCurrency, error: currencyFetchError } = await supabase
         .from('currency')
@@ -225,11 +229,11 @@ export default function DashboardPage() {
           user_id: userId,
           points: totalPoints, // Store total points (max 300, 100 from each category)
           water: activity.id === 'water' 
-            ? updateData.water ?? 0 
-            : (currentCurrency?.water ?? 0), // Maintain existing water value if not updating water
+            ? waterPercentage 
+            : (currentCurrency?.water ?? 0), // Store percentage of water goal completion
           sunlight: activity.id === 'sleep' 
-            ? updateData.sleep ?? 0 
-            : (currentCurrency?.sunlight ?? 0) // Maintain existing sunlight value if not updating sleep
+            ? sleepPercentage 
+            : (currentCurrency?.sunlight ?? 0) // Store percentage of sleep goal completion
         }, {
           onConflict: 'user_id'
         })
@@ -367,7 +371,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-2">
                   <div>
-                    <span className="text-3xl font-medium text-[#6a8d92]">{currency?.water ?? 0} {waterUnit}</span>
+                    <span className="text-3xl font-medium text-[#6a8d92]">{currency?.water ?? 0}</span>
                     <span className="text-sm text-gray-500 ml-2">
                       ({dailyProgress.water.current}/{dailyProgress.water.goal} {waterUnit} today)
                     </span>
