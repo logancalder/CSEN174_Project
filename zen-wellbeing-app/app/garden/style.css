@@ -21,7 +21,9 @@ canvas {
     gap: 10px;
     position: absolute;
     bottom: 1rem;
+    width: 100%;
     image-rendering: pixelated;
+    justify-content: center;
 }
 
 .hotbar-slot {
@@ -69,6 +71,18 @@ canvas {
 
 .grapes-seed {
     background-image: url("/grapes-seed.png");
+}
+
+.wheat {
+    background-image: url("/wheat.png");
+}
+
+.tomato {
+    background-image: url("/tomato.png");
+}
+
+.grapes {
+    background-image: url("/grapes.png");
 }
 
 .skip-btn {

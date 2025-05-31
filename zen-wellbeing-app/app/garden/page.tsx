@@ -8,7 +8,7 @@ import {AppHeader} from "@/components/app-header"; // optional if you have tool 
 export default function GardenPage() {
     useEffect(() => {
         import('./client').then((mod) => {
-            mod.init(); // see below
+            mod.init();
         });
     }, []);
 

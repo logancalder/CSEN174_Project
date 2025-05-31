@@ -146,4 +146,17 @@ export class Inventory {
             return false;
         }
     }
+
+    toString(): string {
+        const seedEntries = Object.entries(this.inventory.seeds)
+            .map(([crop, count]) => `Seeds - ${crop}: ${count}`)
+            .join('\n');
+
+        const cropEntries = Object.entries(this.inventory.crops)
+            .map(([crop, count]) => `Crops - ${crop}: ${count}`)
+            .join('\n');
+
+        return `Inventory:\n${seedEntries}\n${cropEntries}`;
+    }
+
 }

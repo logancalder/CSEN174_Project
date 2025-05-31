@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Leaf, Menu, Home, User, LogOut, Droplets, Sun, ShoppingBag } from "lucide-react"
+import {Leaf, Menu, Home, User, LogOut, Droplets, Sun, ShoppingBag, ShoppingCartIcon} from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from "sonner"
@@ -163,6 +163,15 @@ export function AppHeader() {
           >
             <ShoppingBag className="h-4 w-4" />
             Shop
+          </Link>
+          <Link
+              href="/special-orders"
+              className={`flex items-center gap-1 text-sm font-medium ${
+                  isActive("/special-orders") ? "text-[#5d6b5d] border-b-2 border-[#6b8e6b]" : "text-[#6c6c6c] hover:text-[#5d6b5d]"
+              }`}
+          >
+            <ShoppingCartIcon className="h-4 w-4" />
+            Special Orders
           </Link>
         </nav>
 
