@@ -1,9 +1,11 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+// app/layout.tsx
 import './globals.css'
-import { NavBar } from '@/components/nav-bar'
+import { Inter } from 'next/font/google'
 import { Toaster } from 'sonner'
-import { usePathname } from 'next/navigation'
+import { NavBarWrapper } from '@/components/nav-bar-wrapper'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import type { Metadata } from 'next'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -12,19 +14,17 @@ export const metadata: Metadata = {
   description: 'A personal sanctuary for mindfulness and growth',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
     <html lang="en">
       <body className={inter.className}>
         <div className="min-h-screen flex flex-col">
-          <NavBar />
-          <div className="flex-1">
-            {children}
-          </div>
+          <NavBarWrapper />
+          <div className="flex-1">{children}</div>
         </div>
         <Toaster />
       </body>
