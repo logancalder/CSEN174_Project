@@ -204,7 +204,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
                             currentTile.cropID = currentCropID;
                             currentTile.growthStage = 0;
                         } else {
-                            alert(`Not enough ${seedType} seeds!`);
+                            //alert(`Not enough ${seedType} seeds!`);
                             return; // Stop processing if not enough seeds
                         }
                     } else {
