@@ -37,9 +37,9 @@ export default function LandingPage() {
           </div>
           <div className="flex-1 relative h-[400px] w-full">
             <Image
-              src="/placeholder.svg"
+              src="/garden1.png"
               alt="Zen Garden Illustration"
-              width={400}
+              width={800}
               height={400}
               className="object-contain w-full h-full"
               priority
