@@ -11,23 +11,41 @@ import {Button} from "@/components/ui/button";
 
 type CropType = 'wheat' | 'tomato' | 'grapes';
 
+const CROP_COSTS: Record<CropType, number> = {
+    wheat: 100,
+    tomato: 300,
+    grapes: 500,
+};
+
 type Bundle = {
     name: string;
     requirements: Record<CropType, number>;
+    reward: number;
 };
+
+function calculateReward(requirements: Record<CropType, number>): number {
+    let total = 0;
+    for (const crop in requirements) {
+        total += (CROP_COSTS[crop as CropType] || 0) * requirements[crop as CropType];
+    }
+    return Math.round(total * 1.5);
+}
 
 const SPECIAL_BUNDLES: Bundle[] = [
     {
         name: 'Super Harvest Bundle',
         requirements: {wheat: 3, tomato: 2, grapes: 1},
+        reward: calculateReward({wheat: 3, tomato: 2, grapes: 1}),
     },
     {
         name: 'Tomato Lover Bundle',
         requirements: {wheat: 0, tomato: 999, grapes: 0},
+        reward: calculateReward({wheat: 0, tomato: 999, grapes: 0}),
     },
     {
-        name: 'Winemaker’s Delight',
+        name: "Winemaker's Delight",
         requirements: {wheat: 1, tomato: 0, grapes: 4},
+        reward: calculateReward({wheat: 1, tomato: 0, grapes: 4}),
     },
 ];
 
@@ -35,6 +53,7 @@ const SPECIAL_BUNDLES: Bundle[] = [
 export default function SpecialOrdersPage() {
     const [inventory, setInventory] = useState<Inventory | null>(null);
     const [bundleStatuses, setBundleStatuses] = useState<Record<number, 'success' | 'fail' | null>>({});
+    const [userCrops, setUserCrops] = useState<{ [key in CropType]: number }>({ wheat: 0, tomato: 0, grapes: 0 });
 
     useEffect(() => {
         const loadInventory = async () => {
@@ -44,6 +63,19 @@ export default function SpecialOrdersPage() {
 
             if (session?.user) {
                 await inv.loadFromDatabase(supabase, session.user.id);
+                // Fetch crops directly from Supabase (case-sensitive columns)
+                const { data, error } = await supabase
+                    .from('crops')
+                    .select('Wheat, Tomato, Grapes')
+                    .eq('user_id', session.user.id)
+                    .single();
+                if (data) {
+                    setUserCrops({
+                        wheat: data.Wheat ?? 0,
+                        tomato: data.Tomato ?? 0,
+                        grapes: data.Grapes ?? 0,
+                    });
+                }
             } else {
                 console.warn("No user session found, using default zero inventory.");
             }
@@ -55,12 +87,11 @@ export default function SpecialOrdersPage() {
         loadInventory();
     }, []);
 
-    const attemptBundleSubmit = (bundleIndex: number) => {
+    const attemptBundleSubmit = async (bundleIndex: number) => {
         if (!inventory) return;
 
         const bundle = SPECIAL_BUNDLES[bundleIndex];
-        const userCrops = inventory.getInventory().crops;
-
+        // Use userCrops (from Supabase) for the check
         const hasAll = (['wheat', 'tomato', 'grapes'] as CropType[]).every(
             crop => userCrops[crop] >= bundle.requirements[crop]
         );
@@ -71,9 +102,46 @@ export default function SpecialOrdersPage() {
         }));
 
         if (hasAll) {
-            Object.entries(bundle.requirements).forEach(([crop, amt]) => {
-                inventory.removeCrop(crop as CropType, amt);
-            });
+            // Add reward points to currency in Supabase
+            const supabase = createClientComponentClient();
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                // Fetch current currency
+                const { data: currencyData, error: currencyError } = await supabase
+                    .from('currency')
+                    .select('points')
+                    .eq('user_id', session.user.id)
+                    .single();
+                if (!currencyError) {
+                    const newPoints = (currencyData?.points ?? 0) + bundle.reward;
+                    await supabase
+                        .from('currency')
+                        .upsert({ user_id: session.user.id, points: newPoints }, { onConflict: 'user_id' });
+                }
+                // Subtract crops from Supabase
+                const newCrops = {
+                    Wheat: (userCrops.wheat ?? 0) - (bundle.requirements.wheat ?? 0),
+                    Tomato: (userCrops.tomato ?? 0) - (bundle.requirements.tomato ?? 0),
+                    Grapes: (userCrops.grapes ?? 0) - (bundle.requirements.grapes ?? 0),
+                };
+                await supabase
+                    .from('crops')
+                    .update(newCrops)
+                    .eq('user_id', session.user.id);
+                // Refresh userCrops from Supabase
+                const { data, error } = await supabase
+                    .from('crops')
+                    .select('Wheat, Tomato, Grapes')
+                    .eq('user_id', session.user.id)
+                    .single();
+                if (data) {
+                    setUserCrops({
+                        wheat: data.Wheat ?? 0,
+                        tomato: data.Tomato ?? 0,
+                        grapes: data.Grapes ?? 0,
+                    });
+                }
+            }
         }
     };
 
@@ -113,10 +181,11 @@ export default function SpecialOrdersPage() {
                                                 <h3 className="font-semibold">
                                                     {crop.charAt(0).toUpperCase() + crop.slice(1)}
                                                 </h3>
-                                                <p>Available: {inventory.getInventory().crops[crop]}</p>
+                                                <p>Available: {userCrops[crop]}</p>
                                                 <p>Required: {bundle.requirements[crop]}</p>
                                             </div>
                                         ))}
+                                        <div className="mt-2 font-bold text-green-700">Reward: {bundle.reward} points</div>
                                     </CardContent>
                                     <div className="p-4 pt-0">
                                         <p className="min-h-[1.5rem] mb-2">
