@@ -45,9 +45,9 @@ export class Inventory {
             this.inventory.seeds.wheat = data.Wheat || 0;
             this.inventory.seeds.tomato = data.Tomato || 0;
             this.inventory.seeds.grapes = data.Grapes || 0;
-            // Note: Crops are not stored in the database table based on the image.
-            // If they should be persisted, the table schema and loading logic need adjustment.
+            
         }
+
         this.notifyChange(); // Notify UI after loading from DB
     }
 
@@ -183,6 +183,46 @@ export class Inventory {
             .join('\n');
 
         return `Inventory:\n${seedEntries}\n${cropEntries}`;
+    }
+
+    /**
+     * Loads crops from the database for the given user. If no row exists, creates one with default values.
+     */
+    async loadCropsFromDatabase(supabase: SupabaseClient, userId: string): Promise<void> {
+        const { data, error } = await supabase
+            .from('crops')
+            .select('Wheat, Tomato, Grapes')
+            .eq('user_id', userId)
+            .single();
+
+        // Supabase returns error code 'PGRST116' for no row found (may vary by client version)
+        if (error && (error.code === 'PGRST116' || error.message?.toLowerCase().includes('no rows'))) {
+            // Insert a new row with default values
+            const { error: insertError } = await supabase
+                .from('crops')
+                .insert([{ user_id: userId, Wheat: 0, Tomato: 0, Grapes: 0 }]);
+            if (insertError) {
+                console.error('Error inserting new crops row:', insertError);
+            } else {
+                this.inventory.crops = { wheat: 0, tomato: 0, grapes: 0 };
+            }
+        } else if (data) {
+            this.inventory.crops.wheat = data.Wheat || 0;
+            this.inventory.crops.tomato = data.Tomato || 0;
+            this.inventory.crops.grapes = data.Grapes || 0;
+        } else if (error) {
+            console.error('Error fetching crops:', error);
+        }
+
+        this.notifyChange();
+    }
+
+    /**
+     * Loads both inventory and crops from the database for the given user.
+     */
+    async loadAllFromDatabase(supabase: SupabaseClient, userId: string): Promise<void> {
+        await this.loadFromDatabase(supabase, userId);
+        await this.loadCropsFromDatabase(supabase, userId);
     }
 
 }

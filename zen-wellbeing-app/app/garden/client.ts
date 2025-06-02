@@ -212,7 +212,13 @@ export function setupGame(canvas: HTMLCanvasElement) {
                         return; // Stop processing if no user session
                     }
                 } else if (currentTool == POINTER && currentTile.cropID > -1 && currentTile.growthStage == 3) {
-                    inventory.addCrop(cropNamesByID[currentTile.cropID] as CropType);
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session?.user) {
+                        await inventory.addCrop(cropNamesByID[currentTile.cropID] as CropType, 1, supabase, session.user.id);
+                    } else {
+                        alert('Could not add crop to inventory');
+                        return;
+                    }
                     currentTile.type = FARMLAND;
                     if(currentTile.cropID != cropIDs["grapes"]) {
                         currentTile.cropID = -1;

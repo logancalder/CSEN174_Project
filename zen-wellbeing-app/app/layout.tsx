@@ -19,6 +19,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const cookieStore = cookies()
+  const supabase = createServerComponentClient({ cookies: () => cookieStore })
+  await supabase.auth.getSession() // This ensures cookies are properly handled
+
   return (
     <html lang="en">
       <body className={inter.className}>
