@@ -197,17 +197,16 @@ export default function DashboardPage() {
         return
       }
 
-      // Calculate scores for each metric - each gives up to 100 points
-      const waterScore = calculateScore(updateData.water ?? 0, goals?.water ?? 0)
-      const stepsScore = calculateScore(updateData.steps ?? 0, goals?.steps ?? 0)
-      const sleepScore = calculateScore(updateData.sleep ?? 0, goals?.sleep ?? 0)
-
-      // Calculate total points - each category can contribute up to 100 points
-      const totalPoints = waterScore + stepsScore + sleepScore
-
       // Calculate percentage of goal completion for water and sleep (capped at 100)
-      const waterPercentage = Math.min(((updateData.water ?? 0) / (goals?.water ?? 1)) * 100, 100)
-      const sleepPercentage = Math.min(((updateData.sleep ?? 0) / (goals?.sleep ?? 1)) * 100, 100)
+      const waterPercentage = Math.min(((Number(value)) / (goals?.water ?? 1)) * 100, 100)
+      const sleepPercentage = Math.min(((Number(value)) / (goals?.sleep ?? 1)) * 100, 100)
+      const stepsPercentage = Math.min(((Number(value)) / (goals?.steps ?? 1)) * 100, 100)
+
+      // Calculate today's points for each category (capped at 100)
+      const waterPointsToday = activity.id === 'water' ? Math.round(waterPercentage) : 0
+      const sleepPointsToday = activity.id === 'sleep' ? Math.round(sleepPercentage) : 0
+      const stepsPointsToday = activity.id === 'exercise' ? Math.round(stepsPercentage) : 0
+      const totalPointsToday = waterPointsToday + sleepPointsToday + stepsPointsToday
 
       // Fetch current currency values
       const { data: currentCurrency, error: currencyFetchError } = await supabase
@@ -223,18 +222,16 @@ export default function DashboardPage() {
       }
 
       // Update currency table with new values
+      const newCurrencyValues = {
+        user_id: userId,
+        points: Math.round((currentCurrency?.points ?? 0) + totalPointsToday),
+        water: Math.round((currentCurrency?.water ?? 0) + waterPointsToday),
+        sunlight: Math.round((currentCurrency?.sunlight ?? 0) + sleepPointsToday)
+      }
+
       const { error: currencyError } = await supabase
         .from('currency')
-        .upsert({
-          user_id: userId,
-          points: totalPoints, // Store total points (max 300, 100 from each category)
-          water: activity.id === 'water' 
-            ? waterPercentage 
-            : (currentCurrency?.water ?? 0), // Store percentage of water goal completion
-          sunlight: activity.id === 'sleep' 
-            ? sleepPercentage 
-            : (currentCurrency?.sunlight ?? 0) // Store percentage of sleep goal completion
-        }, {
+        .upsert(newCurrencyValues, {
           onConflict: 'user_id'
         })
 
@@ -268,6 +265,16 @@ export default function DashboardPage() {
   const formatWaterDisplay = (value: number, unit: string) => {
     return `${value} ${unit}`
   }
+
+  const getDailyPoints = (current: number, goal: number) => {
+    if (!goal) return 0;
+    return Math.min(Math.round((current / goal) * 100), 100);
+  };
+
+  const waterPointsToday = getDailyPoints(dailyProgress.water.current, dailyProgress.water.goal);
+  const stepsPointsToday = getDailyPoints(dailyProgress.steps.current, dailyProgress.steps.goal);
+  const sleepPointsToday = getDailyPoints(dailyProgress.sleep.current, dailyProgress.sleep.goal);
+  const totalPointsToday = waterPointsToday + stepsPointsToday + sleepPointsToday;
 
   useEffect(() => {
     const fetchCurrencyAndGoals = async () => {
@@ -354,7 +361,7 @@ export default function DashboardPage() {
               ) : error ? (
                 <span className="text-red-500">{error}</span>
               ) : (
-                <span className="text-3xl font-medium text-[#6b8e6b]">{currency?.points ?? 0}</span>
+                <span className="text-3xl font-medium text-[#6b8e6b]">{totalPointsToday ?? 0}</span>
               )}
             </CardContent>
           </Card>
@@ -371,7 +378,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-2">
                   <div>
-                    <span className="text-3xl font-medium text-[#6a8d92]">{currency?.water ?? 0}</span>
+                    <span className="text-3xl font-medium text-[#6a8d92]">{waterPointsToday ?? 0}</span>
                     <span className="text-sm text-gray-500 ml-2">
                       ({dailyProgress.water.current}/{dailyProgress.water.goal} {waterUnit} today)
                     </span>
@@ -397,7 +404,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-2">
                   <div>
-                    <span className="text-3xl font-medium text-[#e6b800]">{currency?.sunlight ?? 0}</span>
+                    <span className="text-3xl font-medium text-[#e6b800]">{sleepPointsToday ?? 0}</span>
                     <span className="text-sm text-gray-500 ml-2">
                       ({dailyProgress.sleep.current}/{dailyProgress.sleep.goal} hours today)
                     </span>
