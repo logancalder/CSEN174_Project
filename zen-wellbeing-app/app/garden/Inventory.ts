@@ -101,17 +101,43 @@ export class Inventory {
         return false;
     }
 
-    addCrop(type: CropType, amount: number = 1): void {
+    async addCrop(type: CropType, amount: number = 1, supabase?: SupabaseClient, userId?: string): Promise<void> {
         this.inventory.crops[type] += amount;
-        this.saveState();
-        this.notifyChange();
+        this.saveState(); // Save to local storage
+
+        if (supabase && userId) {
+            const { error } = await supabase
+                .from('crops')
+                .update({ [type.charAt(0).toUpperCase() + type.slice(1)]: this.inventory.crops[type] }) // Capitalize first letter for DB column
+                .eq('user_id', userId);
+
+            if (error) {
+                console.error(`Error updating ${type} crop count in database:`, error);
+                // Optionally handle error (e.g., revert local change or show error message)
+            }
+        }
+
+        this.notifyChange(); // Notify UI
     }
 
-    removeCrop(type: CropType, amount: number = 1): boolean {
+    async removeCrop(type: CropType, amount: number = 1, supabase?: SupabaseClient, userId?: string): Promise<boolean> {
         if (this.inventory.crops[type] >= amount) {
             this.inventory.crops[type] -= amount;
-            this.saveState();
-            this.notifyChange();
+            this.saveState(); // Save to local storage
+
+            if (supabase && userId) {
+                const { error } = await supabase
+                    .from('crops')
+                    .update({ [type.charAt(0).toUpperCase() + type.slice(1)]: this.inventory.crops[type] }) // Capitalize first letter for DB column
+                    .eq('user_id', userId);
+
+                if (error) {
+                    console.error(`Error updating ${type} crop count in database:`, error);
+                    // Optionally handle error (e.g., revert local change or show error message)})
+                }
+            }
+
+            this.notifyChange(); // Notify UI
             return true;
         }
         return false;
