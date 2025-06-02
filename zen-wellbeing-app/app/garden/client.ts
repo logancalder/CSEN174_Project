@@ -308,6 +308,12 @@ export function setupGame(canvas: HTMLCanvasElement) {
                 if (tile.watered && tile.cropID > -1) {
                     tile.growthStage = Math.min(3, tile.growthStage + 1);
                 }
+                tile.watered = false;
+                if (tile.type == FARMLAND && tile.cropID == -1) {
+                    if(Math.floor(Math.random() * 2) == 1) {
+                        tile.type = DIRT;
+                    }
+                }
                 tileMap.setTile(i, j, tile);
             }
         }
