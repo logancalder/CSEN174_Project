@@ -59,10 +59,10 @@ export default function SpecialOrdersPage() {
         if (!inventory) return;
 
         const bundle = SPECIAL_BUNDLES[bundleIndex];
-        const userSeeds = inventory.getInventory().seeds;
+        const userCrops = inventory.getInventory().crops;
 
         const hasAll = (['wheat', 'tomato', 'grapes'] as CropType[]).every(
-            crop => userSeeds[crop] >= bundle.requirements[crop]
+            crop => userCrops[crop] >= bundle.requirements[crop]
         );
 
         setBundleStatuses(prev => ({
@@ -99,7 +99,7 @@ export default function SpecialOrdersPage() {
                     <div className="special-orders grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {SPECIAL_BUNDLES.map((bundle, index) => {
                             const hasAll = (['wheat', 'tomato', 'grapes'] as CropType[]).every(
-                                crop => inventory.getInventory().seeds[crop] >= bundle.requirements[crop]
+                                crop => inventory.getInventory().crops[crop] >= bundle.requirements[crop]
                             );
 
                             return (
@@ -113,7 +113,7 @@ export default function SpecialOrdersPage() {
                                                 <h3 className="font-semibold">
                                                     {crop.charAt(0).toUpperCase() + crop.slice(1)}
                                                 </h3>
-                                                <p>Available: {inventory.getInventory().seeds[crop]}</p>
+                                                <p>Available: {inventory.getInventory().crops[crop]}</p>
                                                 <p>Required: {bundle.requirements[crop]}</p>
                                             </div>
                                         ))}
