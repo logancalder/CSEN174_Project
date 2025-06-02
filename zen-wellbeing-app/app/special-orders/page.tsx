@@ -167,7 +167,7 @@ export default function SpecialOrdersPage() {
                     <div className="special-orders grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {SPECIAL_BUNDLES.map((bundle, index) => {
                             const hasAll = (['wheat', 'tomato', 'grapes'] as CropType[]).every(
-                                crop => inventory.getInventory().seeds[crop] >= bundle.requirements[crop]
+                                crop => inventory.getInventory().crops[crop] >= bundle.requirements[crop]
                             );
 
                             return (
