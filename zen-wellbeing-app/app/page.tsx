@@ -2,6 +2,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Leaf } from "lucide-react"
+import garden1 from "@/public/garden1.png"
+import dashboard from "@/public/dashboard.png"
 
 export default function LandingPage() {
   return (
@@ -37,13 +39,14 @@ export default function LandingPage() {
           </div>
           <div className="flex-1 relative h-[400px] w-full">
             <Image
-              src="/garden1.png"
+              src={garden1}
               alt="Zen Garden Illustration"
               width={800}
               height={400}
               className="object-contain w-full h-full"
               priority
             />
+            
           </div>
         </section>
 
@@ -170,7 +173,7 @@ export default function LandingPage() {
             </div>
             <div className="flex-1 relative h-[300px] w-full">
               <Image
-                src="/placeholder.svg"
+                src={dashboard}
                 alt="Zen Garden Illustration"
                 width={500}
                 height={300}
