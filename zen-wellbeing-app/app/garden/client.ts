@@ -93,7 +93,15 @@ export function setupGame(canvas: HTMLCanvasElement) {
     // Register the callback
     inventory.addOnChangeCallback(updateInventoryUI);
 
+    let clickCooldown = false;
+
     canvas.addEventListener('click', async (e) => {
+        if (clickCooldown) return; // Don't allow planting during cooldown
+        clickCooldown = true;
+        setTimeout(() => {
+            clickCooldown = false;
+        }, 300); // 300ms cooldown; adjust as needed
+
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
@@ -109,7 +117,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
                     type: FARMLAND, watered: false, cropID: -1, growthStage: 0
                 });
             } else if (currentTile.type == FARMLAND) {
-                if (currentTool == WATERING_CAN) {
+                if (currentTool == WATERING_CAN && !currentTile.watered) {
                     // Get current session
                     const { data: { session } } = await supabase.auth.getSession();
                     if (session?.user) {
@@ -197,6 +205,8 @@ export function setupGame(canvas: HTMLCanvasElement) {
                     currentTile.cropID = -1;
                     currentTile.growthStage = 0;
                 } else if (currentTool == SEED && currentTile.cropID < 0) {
+
+
                     const seedType = cropNamesByID[currentCropID] as CropType;
                     const { data: { session } } = await supabase.auth.getSession();
                     if (session?.user) {
@@ -204,7 +214,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
                             currentTile.cropID = currentCropID;
                             currentTile.growthStage = 0;
                         } else {
-                            alert(`Not enough ${seedType} seeds!`);
+                            //alert(`Not enough ${seedType} seeds!`);
                             return; // Stop processing if not enough seeds
                         }
                     } else {
@@ -307,6 +317,12 @@ export function setupGame(canvas: HTMLCanvasElement) {
                 const tile = tileMap.getTile(i, j);
                 if (tile.watered && tile.cropID > -1) {
                     tile.growthStage = Math.min(3, tile.growthStage + 1);
+                }
+                tile.watered = false;
+                if (tile.type == FARMLAND && tile.cropID == -1) {
+                    if(Math.floor(Math.random() * 2) == 1) {
+                        tile.type = DIRT;
+                    }
                 }
                 tileMap.setTile(i, j, tile);
             }

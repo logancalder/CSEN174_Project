@@ -8,6 +8,7 @@ import {createClientComponentClient} from "@supabase/auth-helpers-nextjs";
 import {AppHeader} from "@/components/app-header";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
+import {Leaf} from "lucide-react";
 
 type CropType = 'wheat' | 'tomato' | 'grapes';
 
@@ -148,11 +149,13 @@ export default function SpecialOrdersPage() {
 
     if (!inventory) {
         return (
-            <>
-                <AppHeader/>
-                <div>Loading inventory...</div>
-            </>
-        );
+            <div className="min-h-screen bg-[#f5f2e9]">
+                <AppHeader />
+                <main className="container mx-auto px-4 py-8">
+                    <div className="text-center">Loading...</div>
+                </main>
+            </div>
+        )
     }
 
     return (
@@ -171,9 +174,9 @@ export default function SpecialOrdersPage() {
                             );
 
                             return (
-                                <Card key={index} className="order-row bundle-card">
+                                <Card key={index} className="order-row bundle-card bg-[#f0ebe1] border-[#e5dfd3]">
                                     <CardHeader>
-                                        <CardTitle>{bundle.name}</CardTitle>
+                                        <CardTitle className="text-[#5d6b5d]">{bundle.name}</CardTitle>
                                     </CardHeader>
                                     <CardContent>
                                         {(['wheat', 'tomato', 'grapes'] as CropType[]).map(crop => (
@@ -181,8 +184,8 @@ export default function SpecialOrdersPage() {
                                                 <h3 className="font-semibold">
                                                     {crop.charAt(0).toUpperCase() + crop.slice(1)}
                                                 </h3>
-                                                <p>Available: {userCrops[crop]}</p>
-                                                <p>Required: {bundle.requirements[crop]}</p>
+                                                <p className="text-[#6c6c6c]">Available: {userCrops[crop]}</p>
+                                                <p className="text-[#6c6c6c]">Required: {bundle.requirements[crop]}</p>
                                             </div>
                                         ))}
                                         <div className="mt-2 font-bold text-green-700">Reward: {bundle.reward} points</div>
@@ -193,7 +196,8 @@ export default function SpecialOrdersPage() {
                                             {bundleStatuses[index] === 'fail' && '❌ Not enough crops.'}
                                             {bundleStatuses[index] === null && '\u00A0'}
                                         </p>
-                                        <Button onClick={() => attemptBundleSubmit(index)}>
+                                        <Button className="w-full bg-[#6b8e6b] hover:bg-[#5d6b5d] text-white" onClick={() => attemptBundleSubmit(index)}>
+                                            <Leaf className="h-4 w-4 mr-2" />
                                             Submit {bundle.name}
                                         </Button>
                                     </div>

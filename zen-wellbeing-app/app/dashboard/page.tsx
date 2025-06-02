@@ -345,8 +345,9 @@ export default function DashboardPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-medium text-[#5d6b5d] mb-2">Welcome back</h1>
-          <p className="text-[#6c6c6c]">Track your daily rituals and nurture your garden.</p>
+          <h1 className="text-3xl font-medium text-[#5d6b5d] mb-2">Dashboard</h1>
+          <p className="text-[#6c6c6c]">Track your daily habits to earn currency! </p>
+          <p className="text-[#6c6c6c]">You can spend your plant points and sun at the shop to buy different seeds, and drinking more water will give you more water to water your crops with!</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
