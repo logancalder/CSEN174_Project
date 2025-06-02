@@ -7,6 +7,9 @@ import { AppHeader } from "@/components/app-header"
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Leaf, Droplets, Sun } from "lucide-react"
 import { toast } from "sonner"
+import { Inventory } from "@/app/garden/Inventory"
+
+type CropType = 'wheat' | 'tomato' | 'grapes'
 
 interface Plant {
   id: number
@@ -99,19 +102,25 @@ export default function ShopPage() {
         return
       }
 
-      // Start a transaction
-      const { error: transactionError } = await supabase.rpc('purchase_plant', {
-        p_user_id: session.user.id,
-        p_plant_id: plant.id,
-        p_sunlight_cost: plant.min_sunlight,
-        p_points_cost: plant.cost
-      })
+      // Update currency
+      const { error: currencyError } = await supabase
+        .from('currency')
+        .update({ 
+          sunlight: currency.sunlight - plant.min_sunlight,
+          points: currency.points - plant.cost
+        })
+        .eq('user_id', session.user.id)
 
-      if (transactionError) {
-        console.error('Error purchasing plant:', transactionError)
-        toast.error("Failed to purchase plant")
+      if (currencyError) {
+        console.error('Error updating currency:', currencyError)
+        toast.error("Failed to update currency")
         return
       }
+
+      // Add seed to inventory using the Inventory class
+      const inventory = new Inventory()
+      await inventory.loadFromDatabase(supabase, session.user.id)
+      await inventory.addSeed(plant.name.toLowerCase() as CropType, 1, supabase, session.user.id)
 
       // Update local currency state
       setCurrency(prev => ({
