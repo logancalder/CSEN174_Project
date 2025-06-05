@@ -84,7 +84,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
             for (const type of cropTypes) {
                 if (slot.classList.contains(`${type}-seed`)) {
                     // Ensure the text content is updated with the current seed count from the inventory instance
-                    slot.textContent = inventory.getInventory().seeds[type].toString();
+                    slot.textContent = (Math.floor(inventory.getInventory().seeds[type]/2)).toString();
                 }
             }
         });
@@ -93,15 +93,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
     // Register the callback
     inventory.addOnChangeCallback(updateInventoryUI);
 
-    let clickCooldown = false;
-
     canvas.addEventListener('click', async (e) => {
-        if (clickCooldown) return; // Don't allow planting during cooldown
-        clickCooldown = true;
-        setTimeout(() => {
-            clickCooldown = false;
-        }, 300); // 300ms cooldown; adjust as needed
-
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
@@ -117,7 +109,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
                     type: FARMLAND, watered: false, cropID: -1, growthStage: 0
                 });
             } else if (currentTile.type == FARMLAND) {
-                if (currentTool == WATERING_CAN && !currentTile.watered) {
+                if (currentTool == WATERING_CAN) {
                     // Get current session
                     const { data: { session } } = await supabase.auth.getSession();
                     if (session?.user) {
@@ -136,7 +128,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
 
                             if (currencyError) {
                                 console.error('Error fetching currency:', currencyError);
-                                alert('Failed to get current water points.');
+                                //alert('Failed to get current water points.');
                                 return;
                             }
 
@@ -149,14 +141,14 @@ export function setupGame(canvas: HTMLCanvasElement) {
 
                                 if (updateError) {
                                     console.error('Error updating currency:', updateError);
-                                    alert('Failed to update water points.');
+                                    //alert('Failed to update water points.');
                                 } else {
                                     currentTile.watered = true;
                                     // Currency UI update is likely handled by a different component
                                 }
                             } else {
                                 // Not enough water points
-                                alert(`Not enough water points! Need ${waterCost}.`);
+                                //alert(`Not enough water points! Need ${waterCost}.`);
                                 return;
                             }
                         } else {
@@ -172,7 +164,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
 
                             if (currencyError) {
                                 console.error('Error fetching currency:', currencyError);
-                                alert('Failed to get current water points.');
+                                //alert('Failed to get current water points.');
                                 return;
                             }
 
@@ -185,18 +177,18 @@ export function setupGame(canvas: HTMLCanvasElement) {
 
                                 if (updateError) {
                                     console.error('Error updating currency:', updateError);
-                                    alert('Failed to update water points.');
+                                    //alert('Failed to update water points.');
                                 } else {
                                     currentTile.watered = true;
                                 }
                             } else {
                                 // Not enough water points
-                                alert(`Not enough water points! Need ${waterCost}.`);
+                                //alert(`Not enough water points! Need ${waterCost}.`);
                                 return;
                             }
                         }
                     } else {
-                        alert('Please log in to water plants.');
+                        //alert('Please log in to water plants.');
                         return;
                     }
                 } else if (currentTool == PICKAXE) {
@@ -205,8 +197,6 @@ export function setupGame(canvas: HTMLCanvasElement) {
                     currentTile.cropID = -1;
                     currentTile.growthStage = 0;
                 } else if (currentTool == SEED && currentTile.cropID < 0) {
-
-
                     const seedType = cropNamesByID[currentCropID] as CropType;
                     const { data: { session } } = await supabase.auth.getSession();
                     if (session?.user) {
@@ -214,11 +204,11 @@ export function setupGame(canvas: HTMLCanvasElement) {
                             currentTile.cropID = currentCropID;
                             currentTile.growthStage = 0;
                         } else {
-                            //alert(`Not enough ${seedType} seeds!`);
+                            ////alert(`Not enough ${seedType} seeds!`);
                             return; // Stop processing if not enough seeds
                         }
                     } else {
-                        alert('Please log in to plant seeds.');
+                        ////alert('Please log in to plant seeds.');
                         return; // Stop processing if no user session
                     }
                 } else if (currentTool == POINTER && currentTile.cropID > -1 && currentTile.growthStage == 3) {
@@ -226,7 +216,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
                     if (session?.user) {
                         await inventory.addCrop(cropNamesByID[currentTile.cropID] as CropType, 1, supabase, session.user.id);
                     } else {
-                        alert('Could not add crop to inventory');
+                        //alert('Could not add crop to inventory');
                         return;
                     }
                     currentTile.type = FARMLAND;
@@ -268,7 +258,7 @@ export function setupGame(canvas: HTMLCanvasElement) {
             slot.classList.add('selected');
 
             if (slot.classList.contains('watering-can')) {
-                fakeCursor.style.backgroundImage = 'url("/watering-can.png")'; 
+                fakeCursor.style.backgroundImage = 'url("/watering-can.png")';
                 currentTool = WATERING_CAN;
             } else if (slot.classList.contains('hoe')) {
                 fakeCursor.style.backgroundImage = 'url("/hoe.png")';
@@ -291,9 +281,9 @@ export function setupGame(canvas: HTMLCanvasElement) {
                 currentTool = POINTER;
                 fakeCursor.style.backgroundImage = 'none';
             }
-             // Ensure cursor is updated when tool changes, before any potential inventory change
+            // Ensure cursor is updated when tool changes, before any potential inventory change
             if (currentTool != SEED) {
-                 updateInventoryUI(); // Update UI for non-seed tools to show correct counts
+                updateInventoryUI(); // Update UI for non-seed tools to show correct counts
             }
         });
     });
@@ -314,17 +304,12 @@ export function setupGame(canvas: HTMLCanvasElement) {
     skipButton?.addEventListener('click', () => {
         for (let i = 0; i < MAP_WIDTH; i++) {
             for (let j = 0; j < MAP_HEIGHT; j++) {
-                const tile = tileMap.getTile(i, j);
-                if (tile.watered && tile.cropID > -1) {
-                    tile.growthStage = Math.min(3, tile.growthStage + 1);
+                let state = tileMap.getTile(i, j);
+                if (state.watered && state.cropID > -1) {
+                    state.growthStage = Math.min(3, state.growthStage + 1);
                 }
-                tile.watered = false;
-                if (tile.type == FARMLAND && tile.cropID == -1) {
-                    if(Math.floor(Math.random() * 2) == 1) {
-                        tile.type = DIRT;
-                    }
-                }
-                tileMap.setTile(i, j, tile);
+                state.watered = false;
+                tileMap.setTile(i, j, state);
             }
         }
         tileMap.saveState();

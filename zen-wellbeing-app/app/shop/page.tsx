@@ -120,7 +120,7 @@ export default function ShopPage() {
       // Add seed to inventory using the Inventory class
       const inventory = new Inventory()
       await inventory.loadFromDatabase(supabase, session.user.id)
-      await inventory.addSeed(plant.name.toLowerCase() as CropType, 1, supabase, session.user.id)
+      await inventory.addSeed(plant.name.toLowerCase() as CropType, 2, supabase, session.user.id)
 
       // Update local currency state
       setCurrency(prev => ({
